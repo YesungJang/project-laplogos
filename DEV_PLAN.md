@@ -98,6 +98,10 @@
   - `test_json`: `{"v":1, "root": {"i":"root", "t":"Box", "p":{"pad":10}, "c":[{"i":"t1","t":"Txt","p":{"val":"Hello AIX"}}]}}`
   - JSX: `<div id="aix-root"></div>`
 
+### Task 2.5: Turbopack/webpack 設定調整
+
+- [x] **Action:** Turbopack デフォルト環境で webpack 設定を併用するため `turbopack: {}` を設定。
+
 ### Task 2.5: Phase 2 完了確認 (ブラウザ動作検証)
 
 - [ ] **Action:** Terminal (aix_web) で `npm run dev` を実行し、`http://localhost:3000` にアクセス。
