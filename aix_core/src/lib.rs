@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 mod renderer;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AixPage {
     pub v: u8,
     pub root: AixNode,
