@@ -97,3 +97,9 @@
   - `useEffect` でエンジンロード検知後に `render_aix(test_json, "aix-root")` を実行。
   - `test_json`: `{"v":1, "root": {"i":"root", "t":"Box", "p":{"pad":10}, "c":[{"i":"t1","t":"Txt","p":{"val":"Hello AIX"}}]}}`
   - JSX: `<div id="aix-root"></div>`
+
+### Task 2.5: Phase 2 完了確認 (ブラウザ動作検証)
+
+- [ ] **Action:** Terminal (aix_web) で `npm run dev` を実行し、`http://localhost:3000` にアクセス。
+- **Check 1 (Console):** ブラウザの開発者ツール(F12)のコンソールに `Aix Engine Loaded!` と表示されていること。
+- **Check 2 (Display):** 画面上に `Hello AIX` (JSON で指定した文字) とボタンが表示されていること。
