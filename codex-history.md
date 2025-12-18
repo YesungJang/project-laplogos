@@ -13,3 +13,4 @@
 2025-12-19 00:07 Turbopack向けにaix_coreをfile依存として追加しimportをパッケージ参照に変更
 2025-12-19 00:10 Turbopack用にaix_coreへのresolveAliasとtranspile設定を追加
 2025-12-19 00:13 next.config.tsを簡素化しESMエラーの原因になりそうなalias処理を除去
+2025-12-19 00:15 useAixEngineのインポートを相対パスに戻しturbopack設定最小化で対応
