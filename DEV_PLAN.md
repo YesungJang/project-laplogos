@@ -16,7 +16,7 @@
 
 ### Task 1.1: 依存関係の定義
 
-- [ ] **Target:** `aix_core/Cargo.toml`
+- [x] **Target:** `aix_core/Cargo.toml`
 - **Spec:**
   - `[lib]` セクション: `crate-type = ["cdylib", "rlib"]`
   - `[dependencies]`:
