@@ -77,7 +77,7 @@
 
 ### Task 2.2: Next.js Config
 
-- [ ] **Target:** `aix_web/next.config.mjs`
+- [x] **Target:** `aix_web/next.config.mjs`
 - **Spec:**
   - Webpack 設定で `experiments: { asyncWebAssembly: true }` を有効化。
 
