@@ -44,7 +44,7 @@
 
 ### Task 1.3: レンダラーの実装
 
-- [ ] **Target:** `aix_core/src/renderer.rs` (新規作成)
+- [x] **Target:** `aix_core/src/renderer.rs` (新規作成)
 - **Spec:**
   - `web_sys` を使用して DOM を生成する。
   - Func `render_node(document: &Document, node: &AixNode) -> Result<Element, JsValue>`
