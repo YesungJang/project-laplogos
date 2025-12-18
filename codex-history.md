@@ -15,3 +15,4 @@
 2025-12-19 00:13 next.config.tsを簡素化しESMエラーの原因になりそうなalias処理を除去
 2025-12-19 00:15 useAixEngineのインポートを相対パスに戻しturbopack設定最小化で対応
 2025-12-19 00:24 webpackフラグでdevを固定しaix_coreをパッケージ名インポートに戻して再構成
+2025-12-19 00:29 wasmエクスポートに#[wasm_bindgen]を付与しpkgを再ビルド
