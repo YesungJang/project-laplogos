@@ -5,3 +5,4 @@
 2025-12-18 23:46 cargo checkエラーを修正(web-sysにversion追加・AixPageにderive追加)
 2025-12-18 23:51 タスク2.1 wasm-pack buildを実行
 2025-12-18 23:52 タスク2.2 Next.jsのWebpackでasyncWebAssemblyを有効化
+2025-12-18 23:52 タスク2.3 useAixEngineフックを作成

@@ -83,7 +83,7 @@
 
 ### Task 2.3: Custom Hook
 
-- [ ] **Target:** `aix_web/hooks/useAixEngine.ts`
+- [x] **Target:** `aix_web/hooks/useAixEngine.ts`
 - **Spec:**
   - `useEffect` で `import("../../aix_core/pkg")` をダイナミックインポート。
   - ロード完了後 `init_panic_hook()` を実行。
