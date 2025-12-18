@@ -107,3 +107,103 @@
 - [ ] **Action:** Terminal (aix_web) で `npm run dev` を実行し、`http://localhost:3000` にアクセス。
 - **Check 1 (Console):** ブラウザの開発者ツール(F12)のコンソールに `Aix Engine Loaded!` と表示されていること。
 - **Check 2 (Display):** 画面上に `Hello AIX` (JSON で指定した文字) とボタンが表示されていること。
+
+既存の `dev_plan.md` の形式と粒度に合わせ、Phase 2 の続きとして **Phase 3 (Core Logic)** と **Phase 4 (Interaction & Visualizer)** を追加しました。
+
+以下の内容を追記してください。
+
+---
+
+## Phase 3: Core Logic & State Management (`aix_core`)
+
+### Task 3.1: Action と State の実装
+
+- [ ] **Target:** `aix_core/src/store.rs` (新規作成)
+- **Spec:**
+- `serde`, `serde_json` を使用。
+- **Struct `AixState**`:
+- `data`: `HashMap<String, String>` (キーと値を保持)。
+
+- **Enum `Action**` (Deserialize):
+- `Set { key: String, val: String }` (MVP はこれのみ)。
+
+- **Func `reduce(state: &mut AixState, action: Action)**`:
+- Action に基づき State を更新する。
+
+### Task 3.2: Engine Struct 化 (State 保持)
+
+- [ ] **Target:** `aix_core/src/lib.rs`
+- **Spec:**
+- `static` 変数ではなく、`#[wasm_bindgen]` 構造体で状態を持つ形に変更。
+- **Struct `AixEngine**`:
+- `state`: `store::AixState`。
+- `page`: `AixPage` (現在の UI ツリー定義)。
+
+- **Func `new(initial_json: &str) -> AixEngine**`:
+- 初期化時に JSON をパースして保持。
+
+- **Func `get_state_json(&self) -> String**`:
+- 現在の State を JSON 文字列で返す (デバッグ用)。
+
+### Task 3.3: Dispatcher と Event Handling
+
+- [ ] **Target:** `aix_core/src/lib.rs`
+- **Spec:**
+- `AixEngine` にメソッド追加。
+- **Func `dispatch(&mut self, action_json: &str) -> Result<(), JsValue>**`:
+- Action JSON をパースして `reduce` を呼ぶ。
+- **重要:** State 更新後、UI ツリー内の変数（例: `$count`）を置換して再レンダリング処理を呼ぶ（Task 3.4 へ続く）。
+- ※MVP では変数がなければ「再描画」だけトリガーする。
+
+### Task 3.4: Re-rendering ロジック
+
+- [ ] **Target:** `aix_core/src/renderer.rs`
+- **Spec:**
+- `render_node` を修正し、イベントリスナーを付与できるようにする。
+- **Logic:**
+- `node.on` ("click" 等) があれば、Rust 側の `dispatch` を呼ぶクロージャを `addEventListener` で設定。
+- ※Wasm から Rust のメソッドを呼ぶため、`Closure` を適切に扱う必要がある。
+
+- **Func `update_dom(&self, container_id: &str)**`:
+- 既存の要素をクリアして再描画する（Virtual DOM なしの単純実装）。
+
+---
+
+## Phase 4: Interaction & Visualizer (`aix_web`)
+
+### Task 4.1: Debug View コンポーネント
+
+- [ ] **Target:** `aix_web/components/DebugView.tsx` (新規作成)
+- **Spec:**
+- Props: `engine: AixEngine | null`, `refreshTrigger: number`
+- **Layout:**
+- 画面右側（または下部）に固定表示。
+- "State Inspector" と "Action Log" を表示。
+
+- **Logic:**
+- `engine.get_state_json()` を定期的に（またはトリガーで）呼び出して表示。
+
+### Task 4.2: Engine Hook のアップグレード
+
+- [ ] **Target:** `aix_web/hooks/useAixEngine.ts`
+- **Spec:**
+- `AixEngine` インスタンスを React State (`useRef` または `useState`) で保持するように変更。
+- `dispatch` ラッパー関数を作成し、Action 発行後に React 側の再レンダリング（`refreshTrigger` 更新など）をトリガーして Debug View を更新させる。
+
+### Task 4.3: レイアウト統合と動作確認
+
+- [ ] **Target:** `aix_web/app/page.tsx`
+- **Spec:**
+- 画面を 2 カラムに分割 (Grid or Flex)。
+- **Left:** `<div id="aix-root">` (アプリ本体)
+- **Right:** `<DebugView />` (内部状態可視化)
+- **Test Data:**
+- 初期 JSON に Button を配置。
+- `on: { "click": ["Set", "count", "random_val"] }` のような定義を含める。
+
+### Task 4.4: Phase 4 完了確認 (MVP サイクル検証)
+
+- [ ] **Action:** ブラウザでボタンをクリック。
+- **Check 1 (Interaction):** ボタンを押してもエラーが出ないこと。
+- **Check 2 (State Update):** ボタン押下後、右側の Debug View の State 表示が更新されること。
+- **Check 3 (Re-render):** (もし変数置換を実装していれば) 画面上の文字が変わること。実装していなければ、コンソールログで State 変化を確認。
