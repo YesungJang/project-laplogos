@@ -73,7 +73,7 @@
 
 ### Task 2.1: Wasm ビルド (Manual)
 
-- [ ] **Action:** Terminal で `cd aix_core && wasm-pack build --target web` を実行。
+- [x] **Action:** Terminal で `cd aix_core && wasm-pack build --target web` を実行。
 
 ### Task 2.2: Next.js Config
 
