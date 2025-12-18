@@ -57,7 +57,7 @@
 
 ### Task 1.4: エントリーポイント作成
 
-- [ ] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `aix_core/src/lib.rs`
 - **Spec:**
   - `mod renderer;` を追加。
   - Func `init_panic_hook()`: `console_error_panic_hook::set_once()` を呼ぶ。
