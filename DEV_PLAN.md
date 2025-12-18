@@ -91,7 +91,7 @@
 
 ### Task 2.4: 画面表示
 
-- [ ] **Target:** `aix_web/app/page.tsx`
+- [x] **Target:** `aix_web/app/page.tsx`
 - **Spec:**
   - `useAixEngine` を使用。
   - `useEffect` でエンジンロード検知後に `render_aix(test_json, "aix-root")` を実行。
