@@ -8,3 +8,4 @@
 2025-12-18 23:52 タスク2.3 useAixEngineフックを作成
 2025-12-18 23:53 タスク2.4 page.tsxでテストJSONをrender_aixする実装に変更
 2025-12-18 23:57 タスク2.5 Turbopack利用時のwebpack警告回避でturbopack設定を追加
+2025-12-19 00:00 useAixEngineのpkg importパスを修正
