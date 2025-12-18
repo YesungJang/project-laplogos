@@ -7,7 +7,7 @@ export function useAixEngine() {
 
   useEffect(() => {
     let active = true;
-    import("../../aix_core/pkg")
+    import("aix_core")
       .then((mod) => {
         if (!active) return;
         mod.init_panic_hook();

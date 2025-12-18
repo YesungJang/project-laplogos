@@ -10,3 +10,4 @@
 2025-12-18 23:57 タスク2.5 Turbopack利用時のwebpack警告回避でturbopack設定を追加
 2025-12-19 00:00 useAixEngineのpkg importパスを修正
 2025-12-19 00:03 Turbopackで外部ディレクトリを許可しpkgパスを再修正
+2025-12-19 00:07 Turbopack向けにaix_coreをfile依存として追加しimportをパッケージ参照に変更
