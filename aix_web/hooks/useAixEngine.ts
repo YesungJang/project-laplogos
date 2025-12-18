@@ -7,15 +7,23 @@ export function useAixEngine() {
 
   useEffect(() => {
     let active = true;
-    import("aix_core")
-      .then((mod) => {
+
+    const load = async () => {
+      try {
+        const mod = await import("aix_core");
+        if (!active) return;
+        if (typeof mod.default === "function") {
+          await mod.default();
+        }
         if (!active) return;
         mod.init_panic_hook();
         setEngine(mod);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Failed to load AIX engine", err);
-      });
+      }
+    };
+
+    load();
 
     return () => {
       active = false;
