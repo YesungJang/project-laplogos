@@ -29,7 +29,7 @@
 
 ### Task 1.2: スキーマ定義 (Schema v1)
 
-- [ ] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `aix_core/src/lib.rs`
 - **Spec:**
   - `serde`, `serde_json::Value`, `std::collections::HashMap` を use する。
   - **Struct `AixPage`**:
