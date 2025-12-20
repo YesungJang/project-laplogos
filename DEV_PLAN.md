@@ -337,7 +337,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 8.1: Conformance Suite
 
-- [ ] **Target:** `tests/conformance.rs`
+- [x] **Target:** `tests/conformance.rs`
 - [ ] **Spec:**
 - `tests/data/` に `valid_*.json` / `invalid_*.json` を配置
 - 一括テストランナーを作成

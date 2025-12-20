@@ -1,30 +1,74 @@
-use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
-use aix_core::{materialize::validate_global_ids, AixNode};
+use aix_core::{materialize::materialize_one_root, AixPage};
+use aix_core::store::AixState;
+use serde_json::Value;
 
-fn node(id: &str, children: Option<Vec<AixNode>>) -> AixNode {
-    AixNode {
-        i: id.to_string(),
-        t: "Box".to_string(),
-        p: HashMap::new(),
-        c: children,
-        if_: None,
-        for_: None,
-        on: None,
+fn load_page(path: &Path) -> AixPage {
+    let text = fs::read_to_string(path).expect("read json");
+    serde_json::from_str(&text).expect("parse page json")
+}
+
+fn state_for(path: &Path) -> AixState {
+    let mut state = AixState::default();
+    let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    if name.contains("if_non_bool") {
+        state
+            .data
+            .insert("flag".to_string(), Value::String("yes".to_string()));
+    }
+    state
+}
+
+#[test]
+fn valid_specs_pass() {
+    let dir = Path::new("tests/data");
+    for entry in fs::read_dir(dir).expect("read tests/data") {
+        let entry = entry.expect("read entry");
+        let path = entry.path();
+        if path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|n| n.starts_with("valid_"))
+            != Some(true)
+        {
+            continue;
+        }
+        let page = load_page(&path);
+        let mut warnings = Vec::new();
+        let state = state_for(&path);
+        let result = materialize_one_root(&page.root, &state, &mut warnings);
+        assert!(
+            result.is_ok(),
+            "valid file failed: {:?}",
+            path.file_name()
+        );
     }
 }
 
 #[test]
-fn valid_global_ids_pass() {
-    let tree = node(
-        "root_ok",
-        Some(vec![node("child-1", None), node("child:2", None)]),
-    );
-    assert!(validate_global_ids(&tree).is_ok());
-}
-
-#[test]
-fn invalid_global_ids_fail() {
-    let tree = node("root bad", None);
-    assert!(validate_global_ids(&tree).is_err());
+fn invalid_specs_fail() {
+    let dir = Path::new("tests/data");
+    for entry in fs::read_dir(dir).expect("read tests/data") {
+        let entry = entry.expect("read entry");
+        let path = entry.path();
+        if path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|n| n.starts_with("invalid_"))
+            != Some(true)
+        {
+            continue;
+        }
+        let page = load_page(&path);
+        let mut warnings = Vec::new();
+        let state = state_for(&path);
+        let result = materialize_one_root(&page.root, &state, &mut warnings);
+        assert!(
+            result.is_err(),
+            "invalid file unexpectedly passed: {:?}",
+            path.file_name()
+        );
+    }
 }
