@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 
 mod renderer;
 mod store;
+mod materialize;
 
 use store::{apply_action, normalize_action, validate_action, AixState};
 

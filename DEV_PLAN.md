@@ -113,7 +113,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.1: Strict Variable Substitution (No Expr)
 
-- [ ] **Target:** `aix_core/src/materialize.rs`（Task 5.5 で新設）または `renderer.rs`
+- [x] **Target:** `aix_core/src/materialize.rs`（Task 5.5 で新設）または `renderer.rs`
 - [ ] **Spec:**
 
 **Helper:**

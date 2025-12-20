@@ -27,3 +27,4 @@
 2025-12-20 12:15 layout.tsxでsuppressHydrationWarningを追加し拡張由来の属性差分を無視
 2025-12-20 12:23 wasm-packを再ビルドしてAixEngineをpkgに含めた
 2025-12-20 20:45 タスク5.0 ActionSpec正規化とバリデーション/State型変更を実装
+2025-12-20 20:47 タスク5.1 resolve_textとMaterializeScopeをmaterialize.rsに追加
