@@ -1,4 +1,4 @@
-# Project Aix (MVP)
+# Project laplogos (MVP)
 
 **"Human-Unreadable, Machine-Optimal"**
 AI ネイティブ時代の次世代 UI ランタイム＆開発言語プロジェクト。
@@ -13,12 +13,12 @@ AI ネイティブ時代の次世代 UI ランタイム＆開発言語プロジ�
 
 - **Core Engine:** Rust (WebAssembly)
 - **Host App:** Next.js (React)
-- **Schema:** Aix Schema v1 (JSON based)
+- **Schema:** laplogos Schema v1 (JSON based)
 
 ## ディレクトリ構成
 
-- `aix_core/`: Rust 製ランタイムエンジン (Wasm)
-- `aix_web/`: フロントエンド (Next.js) + デバッグ可視化ツール
+- `laplogos_core/`: Rust 製ランタイムエンジン (Wasm)
+- `laplogos_web/`: フロントエンド (Next.js) + デバッグ可視化ツール
 
 ## 開発環境セットアップ
 
@@ -32,6 +32,6 @@ AI ネイティブ時代の次世代 UI ランタイム＆開発言語プロジ�
 
 1. **Rust エンジンのビルド**
    ```bash
-   cd aix_core
+   cd laplogos_core
    wasm-pack build --target web
    ```

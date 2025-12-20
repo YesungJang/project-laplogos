@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   experimental: {
     externalDir: true,
   },
-  transpilePackages: ["aix_core"],
+  transpilePackages: ["laplogos_core"],
   webpack: (config) => {
     config.experiments = {
       ...config.experiments,
