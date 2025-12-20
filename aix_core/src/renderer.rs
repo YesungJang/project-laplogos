@@ -179,6 +179,13 @@ pub fn apply_patches(
             }
             Patch::UpdateAttr { id, key, val } => {
                 let target = find_by_id(&document, id)?;
+                if key == "value" {
+                    if let Some(active) = document.active_element() {
+                        if target.is_same_node(Some(&active)) {
+                            continue;
+                        }
+                    }
+                }
                 target.set_attribute(key, val)?;
             }
             Patch::ReorderChildren {

@@ -282,7 +282,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.3: Focus Guard
 
-- [ ] **Target:** `aix_core/src/renderer.rs`
+- [x] **Target:** `aix_core/src/renderer.rs`
 - [ ] **Spec:**
 - `UpdateAttr` で `value` 更新する際、
   - 対象要素が `document.activeElement` と一致する場合は **スキップ**
