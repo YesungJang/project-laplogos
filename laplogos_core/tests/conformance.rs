@@ -1,16 +1,16 @@
 use std::fs;
 use std::path::Path;
 
-use aix_core::{materialize::materialize_one_root, AixPage, AixState};
+use laplogos_core::{materialize::materialize_one_root, LaplogosPage, LaplogosState};
 use serde_json::Value;
 
-fn load_page(path: &Path) -> AixPage {
+fn load_page(path: &Path) -> LaplogosPage {
     let text = fs::read_to_string(path).expect("read json");
     serde_json::from_str(&text).expect("parse page json")
 }
 
-fn state_for(path: &Path) -> AixState {
-    let mut state = AixState::default();
+fn state_for(path: &Path) -> LaplogosState {
+    let mut state = LaplogosState::default();
     let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     if name.contains("if_non_bool") {
         state

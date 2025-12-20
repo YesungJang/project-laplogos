@@ -1,7 +1,7 @@
 use serde_json::Value;
 use std::collections::HashSet;
 
-use crate::{store::AixState, AixNode};
+use crate::{store::LaplogosState, LaplogosNode};
 
 #[derive(Debug, Clone, Default)]
 pub struct MaterializeScope {
@@ -9,7 +9,7 @@ pub struct MaterializeScope {
     pub key: Option<String>,
 }
 
-pub fn resolve_text(val: &Value, state: &AixState, scope: &MaterializeScope) -> String {
+pub fn resolve_text(val: &Value, state: &LaplogosState, scope: &MaterializeScope) -> String {
     let raw = match val.as_str() {
         Some(s) => s,
         None => return val.to_string(),
@@ -39,7 +39,7 @@ pub fn resolve_text(val: &Value, state: &AixState, scope: &MaterializeScope) -> 
     raw.to_string()
 }
 
-pub fn resolve_if(val: &Value, state: &AixState) -> (bool, Option<String>) {
+pub fn resolve_if(val: &Value, state: &LaplogosState) -> (bool, Option<String>) {
     let key = match val.as_str() {
         Some(s) => s,
         None => return (false, Some("if must be a string key".to_string())),
@@ -55,11 +55,11 @@ pub fn resolve_if(val: &Value, state: &AixState) -> (bool, Option<String>) {
 }
 
 #[derive(Debug, Clone)]
-pub struct AixError {
+pub struct LaplogosError {
     pub message: String,
 }
 
-impl AixError {
+impl LaplogosError {
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -75,7 +75,7 @@ pub fn is_valid_id(id: &str) -> bool {
         .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':' || c == '-')
 }
 
-pub fn validate_global_ids(node: &AixNode) -> Result<(), String> {
+pub fn validate_global_ids(node: &LaplogosNode) -> Result<(), String> {
     if !is_valid_id(&node.i) {
         return Err(format!("Invalid id: {}", node.i));
     }
@@ -88,13 +88,13 @@ pub fn validate_global_ids(node: &AixNode) -> Result<(), String> {
 }
 
 pub fn materialize_many(
-    node: &AixNode,
-    state: &AixState,
+    node: &LaplogosNode,
+    state: &LaplogosState,
     scope: &MaterializeScope,
     warnings: &mut Vec<String>,
-) -> Result<Vec<AixNode>, AixError> {
+) -> Result<Vec<LaplogosNode>, LaplogosError> {
     if !is_valid_id(&node.i) {
-        return Err(AixError::new(format!("Invalid id: {}", node.i)));
+        return Err(LaplogosError::new(format!("Invalid id: {}", node.i)));
     }
 
     if let Some(if_val) = node.if_.as_ref() {
@@ -110,7 +110,7 @@ pub fn materialize_many(
     if let Some(for_val) = node.for_.as_ref() {
         let items = match for_val {
             Value::Array(items) => items,
-            _ => return Err(AixError::new("for must be an array")),
+            _ => return Err(LaplogosError::new("for must be an array")),
         };
 
         let mut output = Vec::new();
@@ -122,25 +122,25 @@ pub fn materialize_many(
                 Value::String(s) => {
                     kind.get_or_insert("str");
                     if kind != Some("str") {
-                        return Err(AixError::new("for array must be all strings or all numbers"));
+                        return Err(LaplogosError::new("for array must be all strings or all numbers"));
                     }
                     s.clone()
                 }
                 Value::Number(n) => {
                     kind.get_or_insert("num");
                     if kind != Some("num") {
-                        return Err(AixError::new("for array must be all strings or all numbers"));
+                        return Err(LaplogosError::new("for array must be all strings or all numbers"));
                     }
                     n.to_string()
                 }
-                _ => return Err(AixError::new("for array items must be string or number")),
+                _ => return Err(LaplogosError::new("for array items must be string or number")),
             };
 
             if !is_valid_id(&item_str) {
-                return Err(AixError::new(format!("Invalid loop item id: {}", item_str)));
+                return Err(LaplogosError::new(format!("Invalid loop item id: {}", item_str)));
             }
             if !seen.insert(item_str.clone()) {
-                return Err(AixError::new(format!("Duplicate loop item: {}", item_str)));
+                return Err(LaplogosError::new(format!("Duplicate loop item: {}", item_str)));
             }
 
             let mut child_scope = scope.clone();
@@ -153,7 +153,7 @@ pub fn materialize_many(
             node_copy.i = format!("{}:{}", node.i, item_str);
 
             if !is_valid_id(&node_copy.i) {
-                return Err(AixError::new(format!("Invalid generated id: {}", node_copy.i)));
+                return Err(LaplogosError::new(format!("Invalid generated id: {}", node_copy.i)));
             }
 
             apply_text(&mut node_copy, state, &child_scope);
@@ -173,23 +173,23 @@ pub fn materialize_many(
 }
 
 pub fn materialize_one_root(
-    root: &AixNode,
-    state: &AixState,
+    root: &LaplogosNode,
+    state: &LaplogosState,
     warnings: &mut Vec<String>,
-) -> Result<AixNode, AixError> {
+) -> Result<LaplogosNode, LaplogosError> {
     if root.for_.is_some() {
-        return Err(AixError::new("root cannot have for"));
+        return Err(LaplogosError::new("root cannot have for"));
     }
 
     let nodes = materialize_many(root, state, &MaterializeScope::default(), warnings)?;
     match nodes.len() {
         1 => Ok(nodes.into_iter().next().unwrap()),
-        0 => Err(AixError::new("root if=false is fatal")),
-        _ => Err(AixError::new("root must materialize to a single node")),
+        0 => Err(LaplogosError::new("root if=false is fatal")),
+        _ => Err(LaplogosError::new("root must materialize to a single node")),
     }
 }
 
-fn apply_text(node: &mut AixNode, state: &AixState, scope: &MaterializeScope) {
+fn apply_text(node: &mut LaplogosNode, state: &LaplogosState, scope: &MaterializeScope) {
     match node.t.as_str() {
         "Txt" => {
             if let Some(val) = node.p.get("val") {
@@ -217,11 +217,11 @@ fn apply_text(node: &mut AixNode, state: &AixState, scope: &MaterializeScope) {
 }
 
 fn materialize_children(
-    node: &mut AixNode,
-    state: &AixState,
+    node: &mut LaplogosNode,
+    state: &LaplogosState,
     scope: &MaterializeScope,
     warnings: &mut Vec<String>,
-) -> Result<(), AixError> {
+) -> Result<(), LaplogosError> {
     let children = match node.c.take() {
         Some(children) => children,
         None => return Ok(()),

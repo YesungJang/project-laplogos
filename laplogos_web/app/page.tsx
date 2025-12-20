@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import { DebugView } from "../components/DebugView";
-import { useAixEngine } from "../hooks/useAixEngine";
+import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
 
-const containerId = "aix-root";
+const containerId = "laplogos-root";
 
 const initialJson = JSON.stringify({
   v: 1,
@@ -13,31 +13,31 @@ const initialJson = JSON.stringify({
     t: "Box",
     p: { pad: 10 },
     c: [
-      { i: "t1", t: "Txt", p: { val: "Hello AIX" } },
+      { i: "t1", t: "Txt", p: { val: "Hello laplogos" } },
       {
         i: "btn1",
         t: "Btn",
-        p: { label: "Set random count" },
-        on: { click: ["Set", "count", "demo"] },
+        p: { label: "Set demo count" },
+        on: { click: [{ t: "set", d: { key: "count", val: "demo" } }] },
       },
     ],
   },
 });
 
 export default function Home() {
-  const { engine, dispatch, refreshTrigger } = useAixEngine(initialJson, containerId);
+  const { engine, dispatch, refreshTrigger } = useLaplogosEngine(initialJson, containerId);
 
   const sendRandom = useMemo(
     () => () => {
       const val = Math.random().toString(36).slice(2, 7);
-      dispatch(JSON.stringify({ type: "Set", key: "count", val }));
+      dispatch(JSON.stringify({ t: "set", d: { key: "count", val } }));
     },
     [dispatch]
   );
 
   return (
     <main className="min-h-screen bg-slate-50 p-8 text-slate-900">
-      <h1 className="mb-6 text-2xl font-semibold">AIX Render Demo</h1>
+      <h1 className="mb-6 text-2xl font-semibold">laplogos Render Demo</h1>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex items-center justify-between">

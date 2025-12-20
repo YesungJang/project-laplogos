@@ -3,19 +3,19 @@ use serde_json::{Number, Value};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
-pub struct AixState {
+pub struct LaplogosState {
     pub data: HashMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub struct AixConfig {
+pub struct LaplogosConfig {
     #[serde(default)]
     pub allowed_actions: Vec<String>,
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
 }
 
-impl AixConfig {
+impl LaplogosConfig {
     pub fn allows_action(&self, action: &str) -> bool {
         self.allowed_actions.iter().any(|a| a == action)
     }
@@ -154,7 +154,7 @@ pub fn validate_action(action: ActionSpec) -> Result<ValidatedAction, String> {
 }
 
 pub fn apply_action(
-    state: &mut AixState,
+    state: &mut LaplogosState,
     action: ValidatedAction,
     event_value: Option<String>,
 ) -> Result<bool, String> {

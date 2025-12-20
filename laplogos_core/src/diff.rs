@@ -1,18 +1,18 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::AixNode;
+use crate::LaplogosNode;
 
 #[derive(Debug, Clone)]
 pub enum Patch {
-    Append { parent_id: String, node: AixNode },
+    Append { parent_id: String, node: LaplogosNode },
     Remove { id: String },
-    Replace { id: String, node: AixNode },
+    Replace { id: String, node: LaplogosNode },
     UpdateText { id: String, val: String },
     UpdateAttr { id: String, key: String, val: String },
     ReorderChildren { parent_id: String, ordered_ids: Vec<String> },
 }
 
-pub fn diff(old: &AixNode, new: &AixNode) -> Vec<Patch> {
+pub fn diff(old: &LaplogosNode, new: &LaplogosNode) -> Vec<Patch> {
     let mut patches = Vec::new();
 
     if old.i != new.i || old.t != new.t {
@@ -37,7 +37,7 @@ pub fn diff(old: &AixNode, new: &AixNode) -> Vec<Patch> {
     patches
 }
 
-fn diff_props(old: &AixNode, new: &AixNode, patches: &mut Vec<Patch>) {
+fn diff_props(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) {
     for (key, new_val) in &new.p {
         let old_val = old.p.get(key);
         if old_val == Some(new_val) {
@@ -67,13 +67,13 @@ fn diff_props(old: &AixNode, new: &AixNode, patches: &mut Vec<Patch>) {
     }
 }
 
-fn diff_children(old: &AixNode, new: &AixNode, patches: &mut Vec<Patch>) {
+fn diff_children(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) {
     let old_children = old.c.as_ref().cloned().unwrap_or_default();
     let new_children = new.c.as_ref().cloned().unwrap_or_default();
 
-    let old_map: HashMap<String, AixNode> =
+    let old_map: HashMap<String, LaplogosNode> =
         old_children.iter().cloned().map(|n| (n.i.clone(), n)).collect();
-    let new_map: HashMap<String, AixNode> =
+    let new_map: HashMap<String, LaplogosNode> =
         new_children.iter().cloned().map(|n| (n.i.clone(), n)).collect();
 
     for (id, old_child) in &old_map {
