@@ -1,12 +1,6 @@
-'use client';
+import { LaplogosApp } from "../components/LaplogosApp";
 
-import { useMemo } from "react";
-import { DebugView } from "../components/DebugView";
-import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
-
-const containerId = "laplogos-root";
-
-const initialJson = JSON.stringify({
+const initialPage = {
   v: 1,
   root: {
     i: "root",
@@ -22,41 +16,31 @@ const initialJson = JSON.stringify({
       },
     ],
   },
-});
+};
 
-export default function Home() {
-  const { engine, dispatch, refreshTrigger } = useLaplogosEngine(initialJson, containerId);
+const initialState = {};
 
-  const sendRandom = useMemo(
-    () => () => {
-      const val = Math.random().toString(36).slice(2, 7);
-      dispatch(JSON.stringify({ t: "set", d: { key: "count", val } }));
-    },
-    [dispatch]
+async function renderLaplogosHtml(page: unknown, state: unknown) {
+  const mod = await import("laplogos_core");
+  if (typeof mod.default === "function") {
+    await mod.default();
+  }
+  return mod.render_laplogos_to_string(page, state);
+}
+
+export default async function Home() {
+  const renderedHtml = await renderLaplogosHtml(initialPage, initialState);
+  const bootstrapJson = JSON.stringify({ page: initialPage, state: initialState }).replace(
+    /</g,
+    "\\u003c"
   );
+  const initialJson = JSON.stringify(initialPage);
 
   return (
-    <main className="min-h-screen bg-slate-50 p-8 text-slate-900">
-      <h1 className="mb-6 text-2xl font-semibold">laplogos Render Demo</h1>
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">App</h2>
-            <button
-              onClick={sendRandom}
-              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              disabled={!engine}
-            >
-              Dispatch random count
-            </button>
-          </div>
-          <div
-            id={containerId}
-            className="min-h-[200px] rounded-md border border-slate-200 bg-slate-50 p-3"
-          />
-        </section>
-        <DebugView engine={engine} refreshTrigger={refreshTrigger} />
-      </div>
-    </main>
+    <LaplogosApp
+      initialJson={initialJson}
+      bootstrapJson={bootstrapJson}
+      renderedHtml={renderedHtml}
+    />
   );
 }

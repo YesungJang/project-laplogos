@@ -117,6 +117,63 @@ pub fn update_dom_with_root(
     Ok(())
 }
 
+pub fn bind_events(engine: &LaplogosEngine, root: &LaplogosNode) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
+    let document = window
+        .document()
+        .ok_or_else(|| JsValue::from_str("No document"))?;
+    bind_events_for_node(&document, root, engine)
+}
+
+fn bind_events_for_node(
+    document: &Document,
+    node: &LaplogosNode,
+    engine: &LaplogosEngine,
+) -> Result<(), JsValue> {
+    let element = find_by_id(document, &node.i)?;
+
+    match node.t.as_str() {
+        "Inp" => {
+            if let Some(val) = node.p.get("val").and_then(|v| v.as_str()) {
+                if !val.starts_with('$') || val.len() <= 1 {
+                    engine.log_warn("Inp.p.val must be $key");
+                } else {
+                    let key = val.trim_start_matches('$').to_string();
+                    let action_json = serde_json::json!({
+                        "t": "set",
+                        "d": { "key": key, "val_from": "event.value" }
+                    })
+                    .to_string();
+                    attach_event_listener(&element, "input", vec![action_json], engine)?;
+                }
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(on) = node.on.as_ref() {
+        for (event_name, actions) in on {
+            let mut action_jsons = Vec::new();
+            for action in actions {
+                if let Ok(text) = serde_json::to_string(action) {
+                    action_jsons.push(text);
+                }
+            }
+            if !action_jsons.is_empty() {
+                attach_event_listener(&element, event_name, action_jsons, engine)?;
+            }
+        }
+    }
+
+    if let Some(children) = node.c.as_ref() {
+        for child in children {
+            bind_events_for_node(document, child, engine)?;
+        }
+    }
+
+    Ok(())
+}
+
 fn attach_event_listener(
     element: &Element,
     event_name: &str,

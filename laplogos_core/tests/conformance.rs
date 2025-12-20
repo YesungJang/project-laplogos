@@ -1,12 +1,13 @@
 use std::fs;
 use std::path::Path;
 
-use laplogos_core::{materialize::materialize_one_root, LaplogosPage, LaplogosState};
+use laplogos_core::{materialize::materialize_one_root, normalize_page, LaplogosPage, LaplogosState};
 use serde_json::Value;
 
-fn load_page(path: &Path) -> LaplogosPage {
+fn load_page(path: &Path) -> Result<LaplogosPage, laplogos_core::materialize::LaplogosError> {
     let text = fs::read_to_string(path).expect("read json");
-    serde_json::from_str(&text).expect("parse page json")
+    let value: Value = serde_json::from_str(&text).expect("parse page json");
+    normalize_page(value)
 }
 
 fn state_for(path: &Path) -> LaplogosState {
@@ -34,7 +35,7 @@ fn valid_specs_pass() {
         {
             continue;
         }
-        let page = load_page(&path);
+        let page = load_page(&path).expect("normalize page");
         let mut warnings = Vec::new();
         let state = state_for(&path);
         let result = materialize_one_root(&page.root, &state, &mut warnings);
@@ -61,13 +62,15 @@ fn invalid_specs_fail() {
             continue;
         }
         let page = load_page(&path);
-        let mut warnings = Vec::new();
-        let state = state_for(&path);
-        let result = materialize_one_root(&page.root, &state, &mut warnings);
-        assert!(
-            result.is_err(),
-            "invalid file unexpectedly passed: {:?}",
-            path.file_name()
-        );
+        if let Ok(page) = page {
+            let mut warnings = Vec::new();
+            let state = state_for(&path);
+            let result = materialize_one_root(&page.root, &state, &mut warnings);
+            assert!(
+                result.is_err(),
+                "invalid file unexpectedly passed: {:?}",
+                path.file_name()
+            );
+        }
     }
 }
