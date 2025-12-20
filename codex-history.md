@@ -37,3 +37,4 @@
 2025-12-20 21:10 タスク6.2 data-aix-id付与とPatch適用/フォールバックを実装
 2025-12-20 21:11 タスク6.3 UpdateAttrのvalue更新時にフォーカスガードを追加
 2025-12-20 21:14 タスク7.1 Capability設定とallowed_actions/hostsチェックを追加
+2025-12-20 21:17 タスク7.2 fetchアクションの非同期実行とallowed_hosts検証を実装

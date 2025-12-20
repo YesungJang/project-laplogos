@@ -4,13 +4,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::{spawn_local, JsFuture};
 
 mod renderer;
 mod store;
 pub mod materialize;
 pub mod diff;
 
-use store::{apply_action, normalize_action, validate_action, AixConfig, AixState};
+use store::{apply_action, normalize_action, validate_action, AixConfig, AixState, ValidatedAction};
 use crate::materialize::{materialize_one_root, AixError};
 use crate::diff;
 
@@ -153,24 +155,36 @@ impl AixEngine {
             }
         };
 
-        let changed = {
-            let mut inner = self.inner.borrow_mut();
-            apply_action(&mut inner.state, validated, event_value)
-        };
-
-        let changed = match changed {
-            Ok(changed) => changed,
-            Err(err) => {
-                self.log_warn(&err);
-                return Ok(());
+        match validated {
+            ValidatedAction::Fetch {
+                url,
+                on_success,
+                on_fail,
+            } => {
+                self.spawn_fetch(url, on_success, on_fail);
+                Ok(())
             }
-        };
+            other => {
+                let changed = {
+                    let mut inner = self.inner.borrow_mut();
+                    apply_action(&mut inner.state, other, event_value)
+                };
 
-        if !changed {
-            return Ok(());
+                let changed = match changed {
+                    Ok(changed) => changed,
+                    Err(err) => {
+                        self.log_warn(&err);
+                        return Ok(());
+                    }
+                };
+
+                if !changed {
+                    return Ok(());
+                }
+
+                self.update_view("aix-root")
+            }
         }
-
-        self.update_view("aix-root")
     }
 
     pub(crate) fn page_root(&self) -> AixNode {
@@ -216,6 +230,59 @@ impl AixEngine {
     fn log_error(&self, err: &AixError) {
         web_sys::console::error_1(&JsValue::from_str(&err.message));
         self.inner.borrow_mut().logs.push(err.message.clone());
+    }
+
+    fn spawn_fetch(&self, url: String, on_success: Vec<Value>, on_fail: Vec<Value>) {
+        let engine = self.clone();
+        spawn_local(async move {
+            let parsed = match web_sys::Url::new(&url) {
+                Ok(url) => url,
+                Err(_) => {
+                    engine.log_warn("fetch.url is invalid");
+                    return;
+                }
+            };
+
+            let host = parsed.host().to_lowercase();
+            if host.is_empty() || !engine.is_host_allowed(&host) {
+                engine.log_warn("fetch host is not allowed");
+                return;
+            }
+
+            let window = match web_sys::window() {
+                Some(window) => window,
+                None => {
+                    engine.log_warn("No window for fetch");
+                    return;
+                }
+            };
+
+            let resp_value = JsFuture::from(window.fetch_with_str(&url)).await;
+            let ok = match resp_value {
+                Ok(val) => val
+                    .dyn_into::<web_sys::Response>()
+                    .map(|resp| resp.ok())
+                    .unwrap_or(false),
+                Err(_) => false,
+            };
+
+            if ok {
+                engine.dispatch_actions(on_success);
+            } else {
+                engine.dispatch_actions(on_fail);
+            }
+        });
+    }
+
+    fn dispatch_actions(&self, actions: Vec<Value>) {
+        for action in actions {
+            match serde_json::to_string(&action) {
+                Ok(text) => {
+                    let _ = self.dispatch_with_event(&text, None);
+                }
+                Err(_) => self.log_warn("Failed to serialize action"),
+            }
+        }
     }
 
     fn is_action_allowed(&self, action: &str) -> bool {

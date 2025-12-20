@@ -310,7 +310,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 7.2: Async Fetch Action
 
-- [ ] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `aix_core/src/lib.rs`
 - [ ] **Spec:**
 
 **Schema (`fetch` ActionSpec.d):**

@@ -36,6 +36,11 @@ pub struct ActionSpec {
 pub enum ValidatedAction {
     Set { key: String, val: ValueSource },
     Inc { key: String, by: f64 },
+    Fetch {
+        url: String,
+        on_success: Vec<Value>,
+        on_fail: Vec<Value>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -121,7 +126,29 @@ pub fn validate_action(action: ActionSpec) -> Result<ValidatedAction, String> {
             };
             Ok(ValidatedAction::Inc { key, by })
         }
-        "fetch" => Err("fetch is not supported in this phase".to_string()),
+        "fetch" => {
+            let url = action
+                .d
+                .get("url")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "fetch.url must be a string".to_string())?
+                .to_string();
+            let on_success = match action.d.get("on_success") {
+                None => Vec::new(),
+                Some(Value::Array(items)) => items.clone(),
+                Some(_) => return Err("fetch.on_success must be an array".to_string()),
+            };
+            let on_fail = match action.d.get("on_fail") {
+                None => Vec::new(),
+                Some(Value::Array(items)) => items.clone(),
+                Some(_) => return Err("fetch.on_fail must be an array".to_string()),
+            };
+            Ok(ValidatedAction::Fetch {
+                url,
+                on_success,
+                on_fail,
+            })
+        }
         _ => Err(format!("Unknown action type: {}", action.t)),
     }
 }
@@ -159,5 +186,6 @@ pub fn apply_action(
             state.data.insert(key, Value::Number(number));
             Ok(true)
         }
+        ValidatedAction::Fetch { .. } => Err("fetch cannot be applied directly".to_string()),
     }
 }
