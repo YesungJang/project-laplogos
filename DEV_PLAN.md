@@ -108,17 +108,11 @@
 - **Check 1 (Console):** ブラウザの開発者ツール(F12)のコンソールに `Aix Engine Loaded!` と表示されていること。
 - **Check 2 (Display):** 画面上に `Hello AIX` (JSON で指定した文字) とボタンが表示されていること。
 
-既存の `dev_plan.md` の形式と粒度に合わせ、Phase 2 の続きとして **Phase 3 (Core Logic)** と **Phase 4 (Interaction & Visualizer)** を追加しました。
-
-以下の内容を追記してください。
-
----
-
 ## Phase 3: Core Logic & State Management (`aix_core`)
 
 ### Task 3.1: Action と State の実装
 
-- [ ] **Target:** `aix_core/src/store.rs` (新規作成)
+- [x] **Target:** `aix_core/src/store.rs` (新規作成)
 - **Spec:**
 - `serde`, `serde_json` を使用。
 - **Struct `AixState**`:
