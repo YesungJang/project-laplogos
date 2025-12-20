@@ -126,7 +126,7 @@
 
 ### Task 3.2: Engine Struct 化 (State 保持)
 
-- [ ] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `aix_core/src/lib.rs`
 - **Spec:**
 - `static` 変数ではなく、`#[wasm_bindgen]` 構造体で状態を持つ形に変更。
 - **Struct `AixEngine**`:

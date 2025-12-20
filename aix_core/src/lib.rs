@@ -4,6 +4,9 @@ use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
 mod renderer;
+mod store;
+
+use store::AixState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AixPage {
@@ -23,6 +26,30 @@ pub struct AixNode {
     pub c: Option<Vec<AixNode>>,
     #[serde(rename = "on", default)]
     pub on: Option<HashMap<String, Vec<String>>>,
+}
+
+#[wasm_bindgen]
+pub struct AixEngine {
+    state: AixState,
+    page: AixPage,
+}
+
+#[wasm_bindgen]
+impl AixEngine {
+    #[wasm_bindgen(constructor)]
+    pub fn new(initial_json: &str) -> Result<AixEngine, JsValue> {
+        let page: AixPage = serde_json::from_str(initial_json)
+            .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
+
+        Ok(AixEngine {
+            state: AixState::default(),
+            page,
+        })
+    }
+
+    pub fn get_state_json(&self) -> String {
+        serde_json::to_string(&self.state.data).unwrap_or_else(|_| "{}".to_string())
+    }
 }
 
 #[wasm_bindgen]

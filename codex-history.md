@@ -18,3 +18,4 @@
 2025-12-19 00:29 wasmエクスポートに#[wasm_bindgen]を付与しpkgを再ビルド
 2025-12-19 00:32 useAixEngineでWasm初期化後にinit_panic_hookを呼ぶよう修正
 2025-12-20 11:55 タスク3.1 store.rsにAixState/Action/reduceを実装
+2025-12-20 11:56 タスク3.2 AixEngine構造体をlib.rsに追加し状態保持を実装
