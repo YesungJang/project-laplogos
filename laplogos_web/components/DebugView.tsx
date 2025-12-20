@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-type Engine = Awaited<ReturnType<typeof import("laplogos_core")>>["LaplogosEngine"];
+type EngineModule = typeof import("laplogos_core");
+
+type Engine = InstanceType<EngineModule["LaplogosEngine"]>;
 
 type Props = {
   engine: Engine | null;
