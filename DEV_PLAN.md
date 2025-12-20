@@ -39,14 +39,14 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 - [x] Task 1.1: Dependencies (`serde`, `wasm-bindgen`, `web-sys`) setup.
 - [x] Task 1.2: Schema v1 Definition (`LaplogosPage`, `LaplogosNode`).
 - [x] Task 1.3: Basic Renderer (`Box`, `Txt`, `Btn`).
-- [x] Task 1.4: Entry Point (`render_aix`).
+- [x] Task 1.4: Entry Point (`render_laplogos`).
 
 ### Phase 2: Next.js Integration
 
 - [x] Task 2.1: Wasm Build setup (`wasm-pack`).
 - [x] Task 2.2: Next.js Config (`asyncWebAssembly`).
 - [x] Task 2.3: Custom Hook (`useLaplogosEngine`).
-- [x] Task 2.4: Screen Display (Hello AIX).
+- [x] Task 2.4: Screen Display (Hello laplogos).
 
 ### Phase 3: State & Action Logic
 
@@ -266,12 +266,12 @@ Diff 対象は必ず **Materialized Tree**。
 
 **Preparation:**
 
-- `render_node` は全要素に `data-aix-id="{node.i}"` を付与する
-- 可能ならルート要素にも `data-aix-root="1"` を付与（fallback 置換を容易にする）
+- `render_node` は全要素に `data-laplogos-id="{node.i}"` を付与する
+- 可能ならルート要素にも `data-laplogos-root="1"` を付与（fallback 置換を容易にする）
 
 **Lookup:**
 
-- `document.querySelector(&format!("[data-aix-id=\"{}\"]", id))` を使う
+- `document.querySelector(&format!("[data-laplogos-id=\"{}\"]", id))` を使う
 - `id` は Global ID Constraint により selector-safe
 
 **Fallback Policy:**

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { DebugView } from "../components/DebugView";
 import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
 
-const containerId = "aix-root";
+const containerId = "laplogos-root";
 
 const initialJson = JSON.stringify({
   v: 1,

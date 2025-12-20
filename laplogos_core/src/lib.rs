@@ -183,7 +183,7 @@ impl LaplogosEngine {
                     return Ok(());
                 }
 
-                self.update_view("aix-root")
+                self.update_view("laplogos-root")
             }
         }
     }
