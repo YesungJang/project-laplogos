@@ -10,7 +10,7 @@ mod store;
 pub mod materialize;
 pub mod diff;
 
-use store::{apply_action, normalize_action, validate_action, AixState};
+use store::{apply_action, normalize_action, validate_action, AixConfig, AixState};
 use crate::materialize::{materialize_one_root, AixError};
 use crate::diff;
 
@@ -48,6 +48,7 @@ struct AixEngineInner {
     page: AixPage,
     logs: Vec<String>,
     last_materialized: Option<AixNode>,
+    config: Option<AixConfig>,
 }
 
 impl Clone for AixEngine {
@@ -71,6 +72,7 @@ impl AixEngine {
                 page,
                 logs: Vec::new(),
                 last_materialized: None,
+                config: None,
             })),
         })
     }
@@ -78,6 +80,23 @@ impl AixEngine {
     pub fn get_state_json(&self) -> String {
         let inner = self.inner.borrow();
         serde_json::to_string(&inner.state.data).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    pub fn init(&self, config_json: &str) -> Result<(), JsValue> {
+        let mut config: AixConfig = serde_json::from_str(config_json)
+            .map_err(|e| JsValue::from_str(&format!("Invalid config JSON: {e}")))?;
+        config.allowed_actions = config
+            .allowed_actions
+            .into_iter()
+            .map(|a| a.to_lowercase())
+            .collect();
+        config.allowed_hosts = config
+            .allowed_hosts
+            .into_iter()
+            .map(|h| h.to_lowercase())
+            .collect();
+        self.inner.borrow_mut().config = Some(config);
+        Ok(())
     }
 
     pub fn dispatch(&self, action_json: &str) -> Result<(), JsValue> {
@@ -120,6 +139,11 @@ impl AixEngine {
                 return Ok(());
             }
         };
+
+        if !self.is_action_allowed(&action.t) {
+            self.log_warn(&format!("Action not allowed: {}", action.t));
+            return Ok(());
+        }
 
         let validated = match validate_action(action) {
             Ok(validated) => validated,
@@ -192,6 +216,22 @@ impl AixEngine {
     fn log_error(&self, err: &AixError) {
         web_sys::console::error_1(&JsValue::from_str(&err.message));
         self.inner.borrow_mut().logs.push(err.message.clone());
+    }
+
+    fn is_action_allowed(&self, action: &str) -> bool {
+        let inner = self.inner.borrow();
+        match inner.config.as_ref() {
+            Some(config) => config.allows_action(action),
+            None => true,
+        }
+    }
+
+    pub(crate) fn is_host_allowed(&self, host: &str) -> bool {
+        let inner = self.inner.borrow();
+        match inner.config.as_ref() {
+            Some(config) => config.allows_host(host),
+            None => false,
+        }
     }
 }
 

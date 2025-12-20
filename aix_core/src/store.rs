@@ -7,6 +7,24 @@ pub struct AixState {
     pub data: HashMap<String, Value>,
 }
 
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct AixConfig {
+    #[serde(default)]
+    pub allowed_actions: Vec<String>,
+    #[serde(default)]
+    pub allowed_hosts: Vec<String>,
+}
+
+impl AixConfig {
+    pub fn allows_action(&self, action: &str) -> bool {
+        self.allowed_actions.iter().any(|a| a == action)
+    }
+
+    pub fn allows_host(&self, host: &str) -> bool {
+        self.allowed_hosts.iter().any(|h| h == host)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct ActionSpec {
     pub t: String,

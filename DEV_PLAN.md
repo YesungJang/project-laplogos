@@ -299,7 +299,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 7.1: Capability System
 
-- [ ] **Target:** `aix_core/src/store.rs` & `aix_core/src/lib.rs`
+- [x] **Target:** `aix_core/src/store.rs` & `aix_core/src/lib.rs`
 - [ ] **Spec:**
 - `struct AixConfig { allowed_actions: Vec<String>, allowed_hosts: Vec<String> }`
 - `AixEngine::init(config)` で注入可能
