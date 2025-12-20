@@ -218,7 +218,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.0: Engine Loop Update (Materialize → Diff → Patch)
 
-- [ ] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `aix_core/src/lib.rs`
 - [ ] **Spec:**
 - `AixEngine` は `last_materialized: Option<AixNode>` を保持する
 - `dispatch` 後のレンダリングフロー:

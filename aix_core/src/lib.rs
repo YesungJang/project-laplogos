@@ -10,6 +10,7 @@ mod store;
 pub mod materialize;
 
 use store::{apply_action, normalize_action, validate_action, AixState};
+use crate::materialize::{materialize_one_root, AixError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AixPage {
@@ -44,6 +45,7 @@ struct AixEngineInner {
     state: AixState,
     page: AixPage,
     logs: Vec<String>,
+    last_materialized: Option<AixNode>,
 }
 
 impl Clone for AixEngine {
@@ -66,6 +68,7 @@ impl AixEngine {
                 state: AixState::default(),
                 page,
                 logs: Vec::new(),
+                last_materialized: None,
             })),
         })
     }
@@ -141,11 +144,43 @@ impl AixEngine {
             return Ok(());
         }
 
-        self.rerender("aix-root")
+        self.update_view("aix-root")
     }
 
     pub(crate) fn page_root(&self) -> AixNode {
         self.with_page(|page| page.root.clone())
+    }
+
+    fn update_view(&self, container_id: &str) -> Result<(), JsValue> {
+        let (materialized, warnings) = self.materialize_current()?;
+        for warn in warnings {
+            self.log_warn(&warn);
+        }
+
+        renderer::update_dom_with_root(container_id, &materialized, Some(self))?;
+
+        self.inner.borrow_mut().last_materialized = Some(materialized);
+        Ok(())
+    }
+
+    fn materialize_current(&self) -> Result<(AixNode, Vec<String>), JsValue> {
+        let mut warnings = Vec::new();
+        let materialized = {
+            let inner = self.inner.borrow();
+            materialize_one_root(&inner.page.root, &inner.state, &mut warnings)
+        };
+        match materialized {
+            Ok(node) => Ok((node, warnings)),
+            Err(err) => {
+                self.log_error(&err);
+                Err(JsValue::from_str(&err.message))
+            }
+        }
+    }
+
+    fn log_error(&self, err: &AixError) {
+        web_sys::console::error_1(&JsValue::from_str(&err.message));
+        self.inner.borrow_mut().logs.push(err.message.clone());
     }
 }
 

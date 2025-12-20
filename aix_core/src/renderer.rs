@@ -96,6 +96,25 @@ pub fn update_dom(engine: &AixEngine, container_id: &str) -> Result<(), JsValue>
     Ok(())
 }
 
+pub fn update_dom_with_root(
+    container_id: &str,
+    root: &AixNode,
+    engine: Option<&AixEngine>,
+) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
+    let document = window
+        .document()
+        .ok_or_else(|| JsValue::from_str("No document"))?;
+    let container = document
+        .get_element_by_id(container_id)
+        .ok_or_else(|| JsValue::from_str("Container not found"))?;
+
+    container.set_inner_html("");
+    let root_el = render_node(&document, root, engine)?;
+    container.append_child(&root_el)?;
+    Ok(())
+}
+
 fn attach_event_listener(
     element: &Element,
     event_name: &str,
