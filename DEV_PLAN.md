@@ -1,10 +1,10 @@
-# Project Aix: Master Development Plan (dev_plan.md)
+# Project laplogos: Master Development Plan (dev_plan.md)
 
 **Project Goal:** "Human-Unreadable, Machine-Optimal"  
 AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（Stage 2）を高めてから Native 展開（Stage 3）へ進む。
 
-- **Core:** `aix_core` (Rust / WebAssembly)
-- **Web:** `aix_web` (Next.js / TypeScript)
+- **Core:** `laplogos_core` (Rust / WebAssembly)
+- **Web:** `laplogos_web` (Next.js / TypeScript)
 - **Schema:** v1 (Strict ID, Short keys)
 
 ---
@@ -26,7 +26,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### 3) Root Policy
 
-- MVP では `AixPage.root` は **常に 1 ノード**（Materialize 後も 1 ノード）
+- MVP では `LaplogosPage.root` は **常に 1 ノード**（Materialize 後も 1 ノード）
   - root 直下で `for` を許可しない（必要になったら v2 で検討）
   - root に `if` を付けるのは可。ただし `if=false` の場合は **Fatal**（空画面ではなく Error View）
 
@@ -37,7 +37,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 ### Phase 1: Rust Core Foundation
 
 - [x] Task 1.1: Dependencies (`serde`, `wasm-bindgen`, `web-sys`) setup.
-- [x] Task 1.2: Schema v1 Definition (`AixPage`, `AixNode`).
+- [x] Task 1.2: Schema v1 Definition (`LaplogosPage`, `LaplogosNode`).
 - [x] Task 1.3: Basic Renderer (`Box`, `Txt`, `Btn`).
 - [x] Task 1.4: Entry Point (`render_aix`).
 
@@ -45,13 +45,13 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 - [x] Task 2.1: Wasm Build setup (`wasm-pack`).
 - [x] Task 2.2: Next.js Config (`asyncWebAssembly`).
-- [x] Task 2.3: Custom Hook (`useAixEngine`).
+- [x] Task 2.3: Custom Hook (`useLaplogosEngine`).
 - [x] Task 2.4: Screen Display (Hello AIX).
 
 ### Phase 3: State & Action Logic
 
-- [x] Task 3.1: Store & Action Struct (`AixState`).
-- [x] Task 3.2: Engine Struct (`AixEngine`).
+- [x] Task 3.1: Store & Action Struct (`LaplogosState`).
+- [x] Task 3.2: Engine Struct (`LaplogosEngine`).
 - [x] Task 3.3: Dispatcher Implementation.
 - [x] Task 3.4: Re-rendering Logic.
 
@@ -70,7 +70,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ---
 
-## Phase 5: Restricted Dynamic Binding (`aix_core`)
+## Phase 5: Restricted Dynamic Binding (`laplogos_core`)
 
 **方針:**  
 式評価を徹底排除し、構造化された Action 定義と厳格なループ制約により、ランタイムの肥大化とバグを防ぐ。
@@ -79,7 +79,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.0: Action Normalization (ActionSpec)
 
-- [x] **Target:** `aix_core/src/store.rs` & `aix_core/src/lib.rs`
+- [x] **Target:** `laplogos_core/src/store.rs` & `laplogos_core/src/lib.rs`
 - [x] **Spec:**
 
 **Struct `ActionSpec`:**
@@ -113,12 +113,12 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.1: Strict Variable Substitution (No Expr)
 
-- [x] **Target:** `aix_core/src/materialize.rs`（Task 5.5 で新設）または `renderer.rs`
+- [x] **Target:** `laplogos_core/src/materialize.rs`（Task 5.5 で新設）または `renderer.rs`
 - [x] **Spec:**
 
 **Helper:**
 
-- `fn resolve_text(val: &Value, state: &AixState, scope: &MaterializeScope) -> String`
+- `fn resolve_text(val: &Value, state: &LaplogosState, scope: &MaterializeScope) -> String`
 - 文字列かつ `"$key"` (完全一致) の場合のみ State から取得
 - 部分一致 (`"Hi $name"`) / `${}` / 演算は **非対応**（そのまま表示）
 
@@ -132,7 +132,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.2: Strict Boolean If
 
-- [x] **Target:** `aix_core/src/materialize.rs`（推奨）または `renderer.rs`
+- [x] **Target:** `laplogos_core/src/materialize.rs`（推奨）または `renderer.rs`
 - [x] **Spec:**
 - **Logic:** State 値が **Boolean(true)** の場合のみ通す
 - `"true"`(文字列), `1`, `null`, 未定義キーは全て false 扱い
@@ -142,12 +142,12 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.3: Global ID Constraint
 
-- [x] **Target:** `aix_core/src/materialize.rs`（推奨）+ `tests/conformance.rs`
+- [x] **Target:** `laplogos_core/src/materialize.rs`（推奨）+ `tests/conformance.rs`
 - [x] **Spec:**
 
 **Global Schema Constraint（Fatal）:**
 
-- `AixNode.i` は常に **`[A-Za-z0-9_:-]+`** を満たすこと
+- `LaplogosNode.i` は常に **`[A-Za-z0-9_:-]+`** を満たすこと
 - 違反が 1 つでもあれば **Fatal**（Error View + log、DOM 更新停止）
 
 > NOTE: `:` は `{parent}:{item}` のために許可する。
@@ -156,7 +156,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.4: Action-based Input (No Magic Binding)
 
-- [x] **Target:** `aix_core/src/renderer.rs`
+- [x] **Target:** `laplogos_core/src/renderer.rs`
 - [x] **Spec:**
 - `Inp` ノード（`<input>`）実装
 - **Validation:** `Inp.p["val"]` は `"$key"` 形式必須（完全一致）。違反は warn + no-op
@@ -172,7 +172,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 > Diff が「$count / if / for を含む Schema ツリー」を比較すると更新が反映されないため、  
 > **Materialize（解決済みツリー）を必ず生成し、それを Diff/Render の基準にする。**
 
-- [x] **Target:** `aix_core/src/materialize.rs`（新規）
+- [x] **Target:** `laplogos_core/src/materialize.rs`（新規）
 - [x] **Spec:**
 
 #### Data Structures
@@ -184,11 +184,11 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 #### Functions (重要: “複数ノードを返せる” 形にする)
 
-- `fn materialize_many(node: &AixNode, state: &AixState, scope: &MaterializeScope) -> Result<Vec<AixNode>, AixError>`
+- `fn materialize_many(node: &LaplogosNode, state: &LaplogosState, scope: &MaterializeScope) -> Result<Vec<LaplogosNode>, LaplogosError>`
   - 通常ノード: `Ok(vec![one])`
   - `if=false`: `Ok(vec![])`（ノードを消す）
   - `for`: `Ok(vec![expanded...])`（複数ノード展開）
-- `fn materialize_one_root(root: &AixNode, state: &AixState) -> Result<AixNode, AixError>`
+- `fn materialize_one_root(root: &LaplogosNode, state: &LaplogosState) -> Result<LaplogosNode, LaplogosError>`
   - Root Policy により **必ず 1 ノード** を返す
   - root の `if=false` は **Fatal**（空ツリーにしない）
 
@@ -208,7 +208,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ---
 
-## Phase 6: Client-Side Smart Diffing (`aix_core`)
+## Phase 6: Client-Side Smart Diffing (`laplogos_core`)
 
 **方針:**  
 DOM の破壊的更新を最小限にし、フォーカス維持とパフォーマンス確保を行う。  
@@ -218,9 +218,9 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.0: Engine Loop Update (Materialize → Diff → Patch)
 
-- [x] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `laplogos_core/src/lib.rs`
 - [x] **Spec:**
-- `AixEngine` は `last_materialized: Option<AixNode>` を保持する
+- `LaplogosEngine` は `last_materialized: Option<LaplogosNode>` を保持する
 - `dispatch` 後のレンダリングフロー:
   1. `new_materialized = materialize_one_root(page.root, state)`
   2. `patches = diff(last_materialized, new_materialized)`
@@ -231,21 +231,21 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.1: Diff Engine & Patch Definition
 
-- [x] **Target:** `aix_core/src/diff.rs`（新規）
+- [x] **Target:** `laplogos_core/src/diff.rs`（新規）
 - [x] **Spec:**
 
 **Enum `Patch`:**
 
-- `Append { parent_id: String, node: AixNode }`
+- `Append { parent_id: String, node: LaplogosNode }`
 - `Remove { id: String }`
-- `Replace { id: String, node: AixNode }`
+- `Replace { id: String, node: LaplogosNode }`
 - `UpdateText { id: String, val: String }`
 - `UpdateAttr { id: String, key: String, val: String }`
 - `ReorderChildren { parent_id: String, ordered_ids: Vec<String> }`
 
 **Diff 対象:**
 
-- `diff(old: &AixNode, new: &AixNode) -> Vec<Patch>` は **materialized tree 同士**で比較する
+- `diff(old: &LaplogosNode, new: &LaplogosNode) -> Vec<Patch>` は **materialized tree 同士**で比較する
 
 **Rules (MVP):**
 
@@ -261,7 +261,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.2: Patch Applier & DOM Identification
 
-- [x] **Target:** `aix_core/src/renderer.rs`
+- [x] **Target:** `laplogos_core/src/renderer.rs`
 - [x] **Spec:**
 
 **Preparation:**
@@ -282,7 +282,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.3: Focus Guard
 
-- [x] **Target:** `aix_core/src/renderer.rs`
+- [x] **Target:** `laplogos_core/src/renderer.rs`
 - [x] **Spec:**
 - `UpdateAttr` で `value` 更新する際、
   - 対象要素が `document.activeElement` と一致する場合は **スキップ**
@@ -290,7 +290,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ---
 
-## Phase 7: Capability & Security (`aix_core`)
+## Phase 7: Capability & Security (`laplogos_core`)
 
 **方針:**  
 セキュリティ基盤を先に整え、その上で通信機能を実装する。
@@ -299,10 +299,10 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 7.1: Capability System
 
-- [x] **Target:** `aix_core/src/store.rs` & `aix_core/src/lib.rs`
+- [x] **Target:** `laplogos_core/src/store.rs` & `laplogos_core/src/lib.rs`
 - [x] **Spec:**
-- `struct AixConfig { allowed_actions: Vec<String>, allowed_hosts: Vec<String> }`
-- `AixEngine::init(config)` で注入可能
+- `struct LaplogosConfig { allowed_actions: Vec<String>, allowed_hosts: Vec<String> }`
+- `LaplogosEngine::init(config)` で注入可能
 - `dispatch` 直前で `allowed_actions` をチェック（未許可は Drop + log）
 - URL チェックヘルパー（`allowed_hosts` と照合）を実装
 
@@ -310,7 +310,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 7.2: Async Fetch Action
 
-- [x] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `laplogos_core/src/lib.rs`
 - [x] **Spec:**
 
 **Schema (`fetch` ActionSpec.d):**
@@ -328,7 +328,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ---
 
-## Phase 8: Reliability & Testing (`aix_core`)
+## Phase 8: Reliability & Testing (`laplogos_core`)
 
 **方針:**  
 仕様準拠を保証するテスト基盤を構築（クラッシュしない / 仕様がブレない）。
