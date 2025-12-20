@@ -30,3 +30,4 @@
 2025-12-20 20:47 タスク5.1 resolve_textとMaterializeScopeをmaterialize.rsに追加
 2025-12-20 20:49 タスク5.2 resolve_ifを追加し非bool判定をwarn扱いに
 2025-12-20 20:52 タスク5.3 ID制約チェックとconformanceテストを追加
+2025-12-20 20:57 タスク5.4 Inp対応とイベントdispatch経路を追加

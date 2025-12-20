@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 mod renderer;
@@ -31,9 +33,21 @@ pub struct AixNode {
 
 #[wasm_bindgen]
 pub struct AixEngine {
+    inner: Rc<RefCell<AixEngineInner>>,
+}
+
+struct AixEngineInner {
     state: AixState,
     page: AixPage,
     logs: Vec<String>,
+}
+
+impl Clone for AixEngine {
+    fn clone(&self) -> Self {
+        AixEngine {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -44,17 +58,44 @@ impl AixEngine {
             .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
 
         Ok(AixEngine {
-            state: AixState::default(),
-            page,
-            logs: Vec::new(),
+            inner: Rc::new(RefCell::new(AixEngineInner {
+                state: AixState::default(),
+                page,
+                logs: Vec::new(),
+            })),
         })
     }
 
     pub fn get_state_json(&self) -> String {
-        serde_json::to_string(&self.state.data).unwrap_or_else(|_| "{}".to_string())
+        let inner = self.inner.borrow();
+        serde_json::to_string(&inner.state.data).unwrap_or_else(|_| "{}".to_string())
     }
 
-    pub fn dispatch(&mut self, action_json: &str) -> Result<(), JsValue> {
+    pub fn dispatch(&self, action_json: &str) -> Result<(), JsValue> {
+        self.dispatch_with_event(action_json, None)
+    }
+
+    pub fn rerender(&self, container_id: &str) -> Result<(), JsValue> {
+        renderer::update_dom(self, container_id)
+    }
+}
+
+impl AixEngine {
+    pub(crate) fn log_warn(&self, message: &str) {
+        web_sys::console::warn_1(&JsValue::from_str(message));
+        self.inner.borrow_mut().logs.push(message.to_string());
+    }
+
+    fn with_page<R>(&self, f: impl FnOnce(&AixPage) -> R) -> R {
+        let inner = self.inner.borrow();
+        f(&inner.page)
+    }
+
+    pub(crate) fn dispatch_with_event(
+        &self,
+        action_json: &str,
+        event_value: Option<String>,
+    ) -> Result<(), JsValue> {
         let raw: Value = match serde_json::from_str(action_json) {
             Ok(value) => value,
             Err(e) => {
@@ -79,7 +120,12 @@ impl AixEngine {
             }
         };
 
-        let changed = match apply_action(&mut self.state, validated, None) {
+        let changed = {
+            let mut inner = self.inner.borrow_mut();
+            apply_action(&mut inner.state, validated, event_value)
+        };
+
+        let changed = match changed {
             Ok(changed) => changed,
             Err(err) => {
                 self.log_warn(&err);
@@ -94,15 +140,8 @@ impl AixEngine {
         self.rerender("aix-root")
     }
 
-    pub fn rerender(&self, container_id: &str) -> Result<(), JsValue> {
-        renderer::update_dom(self, container_id)
-    }
-}
-
-impl AixEngine {
-    fn log_warn(&mut self, message: &str) {
-        web_sys::console::warn_1(&JsValue::from_str(message));
-        self.logs.push(message.to_string());
+    pub(crate) fn page_root(&self) -> AixNode {
+        self.with_page(|page| page.root.clone())
     }
 }
 
@@ -126,7 +165,7 @@ pub fn render_aix(json_str: &str, container_id: &str) -> Result<(), JsValue> {
 
     container.set_inner_html("");
 
-    let root_el = renderer::render_node(&document, &page.root)?;
+    let root_el = renderer::render_node(&document, &page.root, None)?;
     container.append_child(&root_el)?;
 
     Ok(())

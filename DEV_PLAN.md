@@ -156,7 +156,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.4: Action-based Input (No Magic Binding)
 
-- [ ] **Target:** `aix_core/src/renderer.rs`
+- [x] **Target:** `aix_core/src/renderer.rs`
 - [ ] **Spec:**
 - `Inp` ノード（`<input>`）実装
 - **Validation:** `Inp.p["val"]` は `"$key"` 形式必須（完全一致）。違反は warn + no-op
