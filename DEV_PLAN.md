@@ -231,7 +231,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.1: Diff Engine & Patch Definition
 
-- [ ] **Target:** `aix_core/src/diff.rs`（新規）
+- [x] **Target:** `aix_core/src/diff.rs`（新規）
 - [ ] **Spec:**
 
 **Enum `Patch`:**

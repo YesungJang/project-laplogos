@@ -33,3 +33,4 @@
 2025-12-20 20:57 タスク5.4 Inp対応とイベントdispatch経路を追加
 2025-12-20 21:02 タスク5.5 materialize_many/one_rootとループ/if/置換処理を実装
 2025-12-20 21:05 タスク6.0 materializeを使った更新ループとlast_materialized保存を追加
+2025-12-20 21:07 タスク6.1 diff.rsでPatch定義と差分計算を実装

@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 mod renderer;
 mod store;
 pub mod materialize;
+pub mod diff;
 
 use store::{apply_action, normalize_action, validate_action, AixState};
 use crate::materialize::{materialize_one_root, AixError};
