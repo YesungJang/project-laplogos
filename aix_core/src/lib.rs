@@ -12,6 +12,7 @@ pub mod diff;
 
 use store::{apply_action, normalize_action, validate_action, AixState};
 use crate::materialize::{materialize_one_root, AixError};
+use crate::diff;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AixPage {
@@ -158,7 +159,16 @@ impl AixEngine {
             self.log_warn(&warn);
         }
 
-        renderer::update_dom_with_root(container_id, &materialized, Some(self))?;
+        let previous = self.inner.borrow().last_materialized.clone();
+        if let Some(old) = previous {
+            let patches = diff::diff(&old, &materialized);
+            if let Err(err) = renderer::apply_patches(self, container_id, &patches, &materialized) {
+                self.log_warn(&format!("Patch apply failed: {:?}", err));
+                renderer::update_dom_with_root(container_id, &materialized, Some(self))?;
+            }
+        } else {
+            renderer::update_dom_with_root(container_id, &materialized, Some(self))?;
+        }
 
         self.inner.borrow_mut().last_materialized = Some(materialized);
         Ok(())

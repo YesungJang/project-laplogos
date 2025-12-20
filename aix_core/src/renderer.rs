@@ -1,7 +1,7 @@
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{Document, Element, Event, HtmlInputElement};
 
-use crate::{AixEngine, AixNode};
+use crate::{diff::Patch, AixEngine, AixNode};
 
 fn text_from_value(val: &serde_json::Value) -> String {
     val.as_str().map(|s| s.to_owned()).unwrap_or_else(|| val.to_string())
@@ -22,6 +22,7 @@ pub fn render_node(
 
     let element = document.create_element(tag)?;
     element.set_attribute("id", &node.i)?;
+    element.set_attribute("data-aix-id", &node.i)?;
 
     match node.t.as_str() {
         "Txt" => {
@@ -111,6 +112,7 @@ pub fn update_dom_with_root(
 
     container.set_inner_html("");
     let root_el = render_node(&document, root, engine)?;
+    root_el.set_attribute("data-aix-root", "1")?;
     container.append_child(&root_el)?;
     Ok(())
 }
@@ -142,4 +144,66 @@ fn extract_event_value(event: &Event) -> Option<String> {
         .target()
         .and_then(|t| t.dyn_into::<HtmlInputElement>().ok())
         .map(|input| input.value())
+}
+
+pub fn apply_patches(
+    engine: &AixEngine,
+    container_id: &str,
+    patches: &[Patch],
+    new_root: &AixNode,
+) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
+    let document = window
+        .document()
+        .ok_or_else(|| JsValue::from_str("No document"))?;
+
+    for patch in patches {
+        match patch {
+            Patch::Append { parent_id, node } => {
+                let parent = find_by_id(&document, parent_id)?;
+                let child = render_node(&document, node, Some(engine))?;
+                parent.append_child(&child)?;
+            }
+            Patch::Remove { id } => {
+                let target = find_by_id(&document, id)?;
+                target.remove();
+            }
+            Patch::Replace { id, node } => {
+                let target = find_by_id(&document, id)?;
+                let replacement = render_node(&document, node, Some(engine))?;
+                target.replace_with_with_node_1(&replacement)?;
+            }
+            Patch::UpdateText { id, val } => {
+                let target = find_by_id(&document, id)?;
+                target.set_text_content(Some(val));
+            }
+            Patch::UpdateAttr { id, key, val } => {
+                let target = find_by_id(&document, id)?;
+                target.set_attribute(key, val)?;
+            }
+            Patch::ReorderChildren {
+                parent_id,
+                ordered_ids,
+            } => {
+                let parent = find_by_id(&document, parent_id)?;
+                for child_id in ordered_ids {
+                    let child = find_by_id(&document, child_id)?;
+                    parent.append_child(&child)?;
+                }
+            }
+        }
+    }
+
+    if patches.is_empty() {
+        update_dom_with_root(container_id, new_root, Some(engine))?;
+    }
+
+    Ok(())
+}
+
+fn find_by_id(document: &Document, id: &str) -> Result<Element, JsValue> {
+    let selector = format!("[data-aix-id=\"{}\"]", id);
+    document
+        .query_selector(&selector)?
+        .ok_or_else(|| JsValue::from_str(&format!("Element not found: {}", id)))
 }

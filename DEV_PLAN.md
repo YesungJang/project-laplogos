@@ -261,7 +261,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 6.2: Patch Applier & DOM Identification
 
-- [ ] **Target:** `aix_core/src/renderer.rs`
+- [x] **Target:** `aix_core/src/renderer.rs`
 - [ ] **Spec:**
 
 **Preparation:**
