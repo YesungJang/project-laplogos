@@ -2,30 +2,30 @@
 2025-12-18 23:40 タスク1.2 スキーマ構造体をlib.rsに実装
 2025-12-18 23:41 タスク1.3 renderer.rsでDOMレンダラーを実装
 2025-12-18 23:43 タスク1.4 エントリーポイントをlib.rsに追加
-2025-12-18 23:46 cargo checkエラーを修正(web-sysにversion追加・LaplogosPageにderive追加)
+2025-12-18 23:46 cargo checkエラーを修正(web-sysにversion追加・AixPageにderive追加)
 2025-12-18 23:51 タスク2.1 wasm-pack buildを実行
 2025-12-18 23:52 タスク2.2 Next.jsのWebpackでasyncWebAssemblyを有効化
-2025-12-18 23:52 タスク2.3 useLaplogosEngineフックを作成
-2025-12-18 23:53 タスク2.4 page.tsxでテストJSONをrender_laplogosする実装に変更
+2025-12-18 23:52 タスク2.3 useAixEngineフックを作成
+2025-12-18 23:53 タスク2.4 page.tsxでテストJSONをrender_aixする実装に変更
 2025-12-18 23:57 タスク2.5 Turbopack利用時のwebpack警告回避でturbopack設定を追加
-2025-12-19 00:00 useLaplogosEngineのpkg importパスを修正
+2025-12-19 00:00 useAixEngineのpkg importパスを修正
 2025-12-19 00:03 Turbopackで外部ディレクトリを許可しpkgパスを再修正
-2025-12-19 00:07 Turbopack向けにlaplogos_coreをfile依存として追加しimportをパッケージ参照に変更
-2025-12-19 00:10 Turbopack用にlaplogos_coreへのresolveAliasとtranspile設定を追加
+2025-12-19 00:07 Turbopack向けにaix_coreをfile依存として追加しimportをパッケージ参照に変更
+2025-12-19 00:10 Turbopack用にaix_coreへのresolveAliasとtranspile設定を追加
 2025-12-19 00:13 next.config.tsを簡素化しESMエラーの原因になりそうなalias処理を除去
-2025-12-19 00:15 useLaplogosEngineのインポートを相対パスに戻しturbopack設定最小化で対応
-2025-12-19 00:24 webpackフラグでdevを固定しlaplogos_coreをパッケージ名インポートに戻して再構成
+2025-12-19 00:15 useAixEngineのインポートを相対パスに戻しturbopack設定最小化で対応
+2025-12-19 00:24 webpackフラグでdevを固定しaix_coreをパッケージ名インポートに戻して再構成
 2025-12-19 00:29 wasmエクスポートに#[wasm_bindgen]を付与しpkgを再ビルド
-2025-12-19 00:32 useLaplogosEngineでWasm初期化後にinit_panic_hookを呼ぶよう修正
-2025-12-20 11:55 タスク3.1 store.rsにLaplogosState/Action/reduceを実装
-2025-12-20 11:56 タスク3.2 LaplogosEngine構造体をlib.rsに追加し状態保持を実装
+2025-12-19 00:32 useAixEngineでWasm初期化後にinit_panic_hookを呼ぶよう修正
+2025-12-20 11:55 タスク3.1 store.rsにAixState/Action/reduceを実装
+2025-12-20 11:56 タスク3.2 AixEngine構造体をlib.rsに追加し状態保持を実装
 2025-12-20 12:00 タスク3.3 dispatchでAction JSONをreduceに渡す処理を追加
 2025-12-20 12:01 タスク3.4 rendererにupdate_domとrerender連携を追加
 2025-12-20 12:03 タスク4.1 DebugViewコンポーネントを追加
-2025-12-20 12:04 タスク4.2 useLaplogosEngineをLaplogosEngine生成・dispatchラッパー付きに拡張
+2025-12-20 12:04 タスク4.2 useAixEngineをAixEngine生成・dispatchラッパー付きに拡張
 2025-12-20 12:05 タスク4.3 page.tsxを2カラム構成にしDebugViewとdispatchボタンを統合
 2025-12-20 12:15 layout.tsxでsuppressHydrationWarningを追加し拡張由来の属性差分を無視
-2025-12-20 12:23 wasm-packを再ビルドしてLaplogosEngineをpkgに含めた
+2025-12-20 12:23 wasm-packを再ビルドしてAixEngineをpkgに含めた
 2025-12-20 20:45 タスク5.0 ActionSpec正規化とバリデーション/State型変更を実装
 2025-12-20 20:47 タスク5.1 resolve_textとMaterializeScopeをmaterialize.rsに追加
 2025-12-20 20:49 タスク5.2 resolve_ifを追加し非bool判定をwarn扱いに
@@ -34,7 +34,7 @@
 2025-12-20 21:02 タスク5.5 materialize_many/one_rootとループ/if/置換処理を実装
 2025-12-20 21:05 タスク6.0 materializeを使った更新ループとlast_materialized保存を追加
 2025-12-20 21:07 タスク6.1 diff.rsでPatch定義と差分計算を実装
-2025-12-20 21:10 タスク6.2 data-laplogos-id付与とPatch適用/フォールバックを実装
+2025-12-20 21:10 タスク6.2 data-aix-id付与とPatch適用/フォールバックを実装
 2025-12-20 21:11 タスク6.3 UpdateAttrのvalue更新時にフォーカスガードを追加
 2025-12-20 21:14 タスク7.1 Capability設定とallowed_actions/hostsチェックを追加
 2025-12-20 21:17 タスク7.2 fetchアクションの非同期実行とallowed_hosts検証を実装
@@ -55,3 +55,9 @@
 2025-12-20 23:48 R11 フルビルド検証とテスト実行
 2025-12-20 23:54 Task5-8 Spec再実行（cargo test）
 2025-12-21 00:00 Dispatch random count のActionSpecを修正
+2025-12-21 00:32 MCP設定ファイルを確認
+2025-12-21 00:37 MCP設定の再確認
+2025-12-21 00:39 MCP接続再確認
+2025-12-21 00:46 MCP接続の確認を実施
+2025-12-21 01:19 MCP接続状況を確認
+2025-12-21 01:52 PR作成・マージ完了
