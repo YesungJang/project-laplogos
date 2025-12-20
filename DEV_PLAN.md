@@ -141,7 +141,7 @@
 
 ### Task 3.3: Dispatcher と Event Handling
 
-- [ ] **Target:** `aix_core/src/lib.rs`
+- [x] **Target:** `aix_core/src/lib.rs`
 - **Spec:**
 - `AixEngine` にメソッド追加。
 - **Func `dispatch(&mut self, action_json: &str) -> Result<(), JsValue>**`:

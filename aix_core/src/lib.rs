@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 mod renderer;
 mod store;
 
-use store::AixState;
+use store::{reduce, Action, AixState};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AixPage {
@@ -49,6 +49,13 @@ impl AixEngine {
 
     pub fn get_state_json(&self) -> String {
         serde_json::to_string(&self.state.data).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    pub fn dispatch(&mut self, action_json: &str) -> Result<(), JsValue> {
+        let action: Action =
+            serde_json::from_str(action_json).map_err(|e| JsValue::from_str(&format!("Invalid action JSON: {e}")))?;
+        reduce(&mut self.state, action);
+        Ok(())
     }
 }
 
