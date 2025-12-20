@@ -5,21 +5,21 @@ Thumbs.db
 .idea/
 *.swp
 
-# --- Rust (aix_core) ---
-/aix_core/target/
-/aix_core/**/*.rs.bk
+# --- Rust (laplogos_core) ---
+/laplogos_core/target/
+/laplogos_core/**/*.rs.bk
 Cargo.lock
 
-# --- Node.js / Next.js (aix_web) ---
-/aix_web/node_modules/
-/aix_web/.next/
-/aix_web/out/
-/aix_web/build/
-/aix_web/.env
-/aix_web/.env.local
-/aix_web/.env.development.local
-/aix_web/.env.test.local
-/aix_web/.env.production.local
+# --- Node.js / Next.js (laplogos_web) ---
+/laplogos_web/node_modules/
+/laplogos_web/.next/
+/laplogos_web/out/
+/laplogos_web/build/
+/laplogos_web/.env
+/laplogos_web/.env.local
+/laplogos_web/.env.development.local
+/laplogos_web/.env.test.local
+/laplogos_web/.env.production.local
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
