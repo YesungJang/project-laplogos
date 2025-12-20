@@ -42,3 +42,22 @@
 2025-12-20 21:22 タスク8.2 render_to_stringとsnapshotテストを追加
 2025-12-20 21:31 spec実行で公開APIを調整しテスト通過
 2025-12-20 21:37 Task5以降のSpecチェックとcargo test実行
+2025-12-20 23:06 R1 Laplogos残骸の棚卸し結果を整理
+2025-12-20 23:10 R2 ディレクトリをlaplogos_core/laplogos_webへ改名
+2025-12-20 23:12 R3 crate名をlaplogos_coreへ変更しwasm-packビルド
+2025-12-20 23:14 R4 render_laplogosをrender_laplogosに改名
+2025-12-20 23:18 R5 RustのLaplogos*型をLaplogos*に改名しcargo check
+2025-12-20 23:22 R6 Webフックと表示文言をlaplogosへ改名
+2025-12-20 23:26 R7 wasm参照とweb設定/依存をlaplogos_coreへ追従
+2025-12-20 23:28 R8 テスト/フィクスチャのLaplogos参照を確認しlaplogosに統一
+2025-12-20 23:30 R9 README/DEV_PLANのLaplogos表記をlaplogosへ統一
+2025-12-20 23:41 R10 旧名残骸の最終クリーンアップ
+2025-12-20 23:48 R11 フルビルド検証とテスト実行
+2025-12-20 23:54 Task5-8 Spec再実行（cargo test）
+2025-12-21 00:00 Dispatch random count のActionSpecを修正
+2025-12-21 00:32 MCP設定ファイルを確認
+2025-12-21 00:37 MCP設定の再確認
+2025-12-21 00:39 MCP接続再確認
+2025-12-21 00:46 MCP接続の確認を実施
+2025-12-21 01:19 MCP接続状況を確認
+2025-12-21 01:26 PR作成・マージ対応
