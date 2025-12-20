@@ -8,6 +8,8 @@ fn node(id: &str, children: Option<Vec<AixNode>>) -> AixNode {
         t: "Box".to_string(),
         p: HashMap::new(),
         c: children,
+        if_: None,
+        for_: None,
         on: None,
     }
 }

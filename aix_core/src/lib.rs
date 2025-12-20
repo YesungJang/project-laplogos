@@ -27,6 +27,10 @@ pub struct AixNode {
     pub p: HashMap<String, Value>,
     #[serde(rename = "c", default)]
     pub c: Option<Vec<AixNode>>,
+    #[serde(rename = "if", default)]
+    pub if_: Option<Value>,
+    #[serde(rename = "for", default)]
+    pub for_: Option<Value>,
     #[serde(rename = "on", default)]
     pub on: Option<HashMap<String, Vec<Value>>>,
 }

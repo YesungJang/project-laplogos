@@ -172,7 +172,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 > Diff が「$count / if / for を含む Schema ツリー」を比較すると更新が反映されないため、  
 > **Materialize（解決済みツリー）を必ず生成し、それを Diff/Render の基準にする。**
 
-- [ ] **Target:** `aix_core/src/materialize.rs`（新規）
+- [x] **Target:** `aix_core/src/materialize.rs`（新規）
 - [ ] **Spec:**
 
 #### Data Structures
