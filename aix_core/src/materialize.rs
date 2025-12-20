@@ -37,3 +37,18 @@ pub fn resolve_text(val: &Value, state: &AixState, scope: &MaterializeScope) -> 
 
     raw.to_string()
 }
+
+pub fn resolve_if(val: &Value, state: &AixState) -> (bool, Option<String>) {
+    let key = match val.as_str() {
+        Some(s) => s,
+        None => return (false, Some("if must be a string key".to_string())),
+    };
+
+    let key = key.strip_prefix('$').unwrap_or(key);
+    match state.data.get(key) {
+        Some(Value::Bool(true)) => (true, None),
+        Some(Value::Bool(false)) => (false, None),
+        Some(_) => (false, Some(format!("if key '{}' is not boolean", key))),
+        None => (false, None),
+    }
+}

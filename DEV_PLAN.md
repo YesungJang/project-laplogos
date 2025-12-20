@@ -132,7 +132,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.2: Strict Boolean If
 
-- [ ] **Target:** `aix_core/src/materialize.rs`（推奨）または `renderer.rs`
+- [x] **Target:** `aix_core/src/materialize.rs`（推奨）または `renderer.rs`
 - [ ] **Spec:**
 - **Logic:** State 値が **Boolean(true)** の場合のみ通す
 - `"true"`(文字列), `1`, `null`, 未定義キーは全て false 扱い
