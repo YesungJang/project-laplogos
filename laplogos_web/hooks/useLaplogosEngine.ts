@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-type EngineModule = typeof import("aix_core");
+type EngineModule = typeof import("laplogos_core");
 type Engine = InstanceType<EngineModule["LaplogosEngine"]>;
 
 type UseLaplogosEngineResult = {
@@ -18,7 +18,7 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
 
     const load = async () => {
       try {
-        const mod = await import("aix_core");
+        const mod = await import("laplogos_core");
         if (!active) return;
         if (typeof mod.default === "function") {
           await mod.default();

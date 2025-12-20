@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Engine = Awaited<ReturnType<typeof import("aix_core")>>["LaplogosEngine"];
+type Engine = Awaited<ReturnType<typeof import("laplogos_core")>>["LaplogosEngine"];
 
 type Props = {
   engine: Engine | null;

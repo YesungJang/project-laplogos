@@ -48,3 +48,4 @@
 2025-12-20 23:14 R4 render_aixをrender_laplogosに改名
 2025-12-20 23:18 R5 RustのAix*型をLaplogos*に改名しcargo check
 2025-12-20 23:22 R6 Webフックと表示文言をlaplogosへ改名
+2025-12-20 23:26 R7 wasm参照とweb設定/依存をlaplogos_coreへ追従

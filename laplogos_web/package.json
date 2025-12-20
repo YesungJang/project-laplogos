@@ -1,5 +1,5 @@
 {
-  "name": "aix_web",
+  "name": "laplogos_web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "aix_core": "file:../aix_core/pkg",
+    "laplogos_core": "file:../laplogos_core/pkg",
     "next": "16.0.10",
     "react": "19.2.1",
     "react-dom": "19.2.1"
