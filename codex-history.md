@@ -21,3 +21,6 @@
 2025-12-20 11:56 タスク3.2 AixEngine構造体をlib.rsに追加し状態保持を実装
 2025-12-20 12:00 タスク3.3 dispatchでAction JSONをreduceに渡す処理を追加
 2025-12-20 12:01 タスク3.4 rendererにupdate_domとrerender連携を追加
+2025-12-20 12:03 タスク4.1 DebugViewコンポーネントを追加
+2025-12-20 12:04 タスク4.2 useAixEngineをAixEngine生成・dispatchラッパー付きに拡張
+2025-12-20 12:05 タスク4.3 page.tsxを2カラム構成にしDebugViewとdispatchボタンを統合

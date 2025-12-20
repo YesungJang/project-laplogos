@@ -1,9 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type EngineModule = typeof import("aix_core");
+type Engine = InstanceType<EngineModule["AixEngine"]>;
 
-export function useAixEngine() {
-  const [engine, setEngine] = useState<EngineModule | null>(null);
+type UseAixEngineResult = {
+  engine: Engine | null;
+  dispatch: (actionJson: string) => Promise<void>;
+  refreshTrigger: number;
+};
+
+export function useAixEngine(initialJson: string, containerId: string): UseAixEngineResult {
+  const [engine, setEngine] = useState<Engine | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -17,7 +25,11 @@ export function useAixEngine() {
         }
         if (!active) return;
         mod.init_panic_hook();
-        setEngine(mod);
+        const inst = new mod.AixEngine(initialJson);
+        if (!active) return;
+        await inst.rerender(containerId);
+        setEngine(inst);
+        setRefreshTrigger((v) => v + 1);
       } catch (err) {
         console.error("Failed to load AIX engine", err);
       }
@@ -28,7 +40,21 @@ export function useAixEngine() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialJson, containerId]);
 
-  return engine;
+  const dispatch = useCallback(
+    async (actionJson: string) => {
+      if (!engine) return;
+      try {
+        engine.dispatch(actionJson);
+        await engine.rerender(containerId);
+        setRefreshTrigger((v) => v + 1);
+      } catch (err) {
+        console.error("Failed to dispatch action", err);
+      }
+    },
+    [engine, containerId]
+  );
+
+  return { engine, dispatch, refreshTrigger };
 }

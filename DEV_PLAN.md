@@ -167,7 +167,7 @@
 
 ### Task 4.1: Debug View コンポーネント
 
-- [ ] **Target:** `aix_web/components/DebugView.tsx` (新規作成)
+- [x] **Target:** `aix_web/components/DebugView.tsx` (新規作成)
 - **Spec:**
 - Props: `engine: AixEngine | null`, `refreshTrigger: number`
 - **Layout:**
@@ -179,14 +179,14 @@
 
 ### Task 4.2: Engine Hook のアップグレード
 
-- [ ] **Target:** `aix_web/hooks/useAixEngine.ts`
+- [x] **Target:** `aix_web/hooks/useAixEngine.ts`
 - **Spec:**
 - `AixEngine` インスタンスを React State (`useRef` または `useState`) で保持するように変更。
 - `dispatch` ラッパー関数を作成し、Action 発行後に React 側の再レンダリング（`refreshTrigger` 更新など）をトリガーして Debug View を更新させる。
 
 ### Task 4.3: レイアウト統合と動作確認
 
-- [ ] **Target:** `aix_web/app/page.tsx`
+- [x] **Target:** `aix_web/app/page.tsx`
 - **Spec:**
 - 画面を 2 カラムに分割 (Grid or Flex)。
 - **Left:** `<div id="aix-root">` (アプリ本体)
