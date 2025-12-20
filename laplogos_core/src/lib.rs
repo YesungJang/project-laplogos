@@ -13,18 +13,18 @@ pub mod materialize;
 pub mod diff;
 
 pub use renderer::render_to_string;
-pub use store::AixState;
-use store::{apply_action, normalize_action, validate_action, AixConfig, ValidatedAction};
-use crate::materialize::{materialize_one_root, AixError};
+pub use store::LaplogosState;
+use store::{apply_action, normalize_action, validate_action, LaplogosConfig, ValidatedAction};
+use crate::materialize::{materialize_one_root, LaplogosError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AixPage {
+pub struct LaplogosPage {
     pub v: u8,
-    pub root: AixNode,
+    pub root: LaplogosNode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AixNode {
+pub struct LaplogosNode {
     #[serde(rename = "i")]
     pub i: String,
     #[serde(rename = "t")]
@@ -32,7 +32,7 @@ pub struct AixNode {
     #[serde(rename = "p", default)]
     pub p: HashMap<String, Value>,
     #[serde(rename = "c", default)]
-    pub c: Option<Vec<AixNode>>,
+    pub c: Option<Vec<LaplogosNode>>,
     #[serde(rename = "if", default)]
     pub if_: Option<Value>,
     #[serde(rename = "for", default)]
@@ -42,36 +42,36 @@ pub struct AixNode {
 }
 
 #[wasm_bindgen]
-pub struct AixEngine {
-    inner: Rc<RefCell<AixEngineInner>>,
+pub struct LaplogosEngine {
+    inner: Rc<RefCell<LaplogosEngineInner>>,
 }
 
-struct AixEngineInner {
-    state: AixState,
-    page: AixPage,
+struct LaplogosEngineInner {
+    state: LaplogosState,
+    page: LaplogosPage,
     logs: Vec<String>,
-    last_materialized: Option<AixNode>,
-    config: Option<AixConfig>,
+    last_materialized: Option<LaplogosNode>,
+    config: Option<LaplogosConfig>,
 }
 
-impl Clone for AixEngine {
+impl Clone for LaplogosEngine {
     fn clone(&self) -> Self {
-        AixEngine {
+        LaplogosEngine {
             inner: self.inner.clone(),
         }
     }
 }
 
 #[wasm_bindgen]
-impl AixEngine {
+impl LaplogosEngine {
     #[wasm_bindgen(constructor)]
-    pub fn new(initial_json: &str) -> Result<AixEngine, JsValue> {
-        let page: AixPage = serde_json::from_str(initial_json)
+    pub fn new(initial_json: &str) -> Result<LaplogosEngine, JsValue> {
+        let page: LaplogosPage = serde_json::from_str(initial_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
 
-        Ok(AixEngine {
-            inner: Rc::new(RefCell::new(AixEngineInner {
-                state: AixState::default(),
+        Ok(LaplogosEngine {
+            inner: Rc::new(RefCell::new(LaplogosEngineInner {
+                state: LaplogosState::default(),
                 page,
                 logs: Vec::new(),
                 last_materialized: None,
@@ -86,7 +86,7 @@ impl AixEngine {
     }
 
     pub fn init(&self, config_json: &str) -> Result<(), JsValue> {
-        let mut config: AixConfig = serde_json::from_str(config_json)
+        let mut config: LaplogosConfig = serde_json::from_str(config_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid config JSON: {e}")))?;
         config.allowed_actions = config
             .allowed_actions
@@ -111,13 +111,13 @@ impl AixEngine {
     }
 }
 
-impl AixEngine {
+impl LaplogosEngine {
     pub(crate) fn log_warn(&self, message: &str) {
         web_sys::console::warn_1(&JsValue::from_str(message));
         self.inner.borrow_mut().logs.push(message.to_string());
     }
 
-    fn with_page<R>(&self, f: impl FnOnce(&AixPage) -> R) -> R {
+    fn with_page<R>(&self, f: impl FnOnce(&LaplogosPage) -> R) -> R {
         let inner = self.inner.borrow();
         f(&inner.page)
     }
@@ -188,7 +188,7 @@ impl AixEngine {
         }
     }
 
-    pub(crate) fn page_root(&self) -> AixNode {
+    pub(crate) fn page_root(&self) -> LaplogosNode {
         self.with_page(|page| page.root.clone())
     }
 
@@ -213,7 +213,7 @@ impl AixEngine {
         Ok(())
     }
 
-    fn materialize_current(&self) -> Result<(AixNode, Vec<String>), JsValue> {
+    fn materialize_current(&self) -> Result<(LaplogosNode, Vec<String>), JsValue> {
         let mut warnings = Vec::new();
         let materialized = {
             let inner = self.inner.borrow();
@@ -228,7 +228,7 @@ impl AixEngine {
         }
     }
 
-    fn log_error(&self, err: &AixError) {
+    fn log_error(&self, err: &LaplogosError) {
         web_sys::console::error_1(&JsValue::from_str(&err.message));
         self.inner.borrow_mut().logs.push(err.message.clone());
     }
@@ -310,7 +310,7 @@ pub fn init_panic_hook() {
 
 #[wasm_bindgen]
 pub fn render_laplogos(json_str: &str, container_id: &str) -> Result<(), JsValue> {
-    let page: AixPage =
+    let page: LaplogosPage =
         serde_json::from_str(json_str).map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
 
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;

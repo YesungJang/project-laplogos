@@ -1,7 +1,7 @@
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{Document, Element, Event, HtmlInputElement};
 
-use crate::{diff::Patch, AixEngine, AixNode};
+use crate::{diff::Patch, LaplogosEngine, LaplogosNode};
 
 fn text_from_value(val: &serde_json::Value) -> String {
     val.as_str().map(|s| s.to_owned()).unwrap_or_else(|| val.to_string())
@@ -9,8 +9,8 @@ fn text_from_value(val: &serde_json::Value) -> String {
 
 pub fn render_node(
     document: &Document,
-    node: &AixNode,
-    engine: Option<&AixEngine>,
+    node: &LaplogosNode,
+    engine: Option<&LaplogosEngine>,
 ) -> Result<Element, JsValue> {
     let tag = match node.t.as_str() {
         "Box" => "div",
@@ -81,7 +81,7 @@ pub fn render_node(
     Ok(element)
 }
 
-pub fn update_dom(engine: &AixEngine, container_id: &str) -> Result<(), JsValue> {
+pub fn update_dom(engine: &LaplogosEngine, container_id: &str) -> Result<(), JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
     let document = window
         .document()
@@ -99,8 +99,8 @@ pub fn update_dom(engine: &AixEngine, container_id: &str) -> Result<(), JsValue>
 
 pub fn update_dom_with_root(
     container_id: &str,
-    root: &AixNode,
-    engine: Option<&AixEngine>,
+    root: &LaplogosNode,
+    engine: Option<&LaplogosEngine>,
 ) -> Result<(), JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
     let document = window
@@ -121,7 +121,7 @@ fn attach_event_listener(
     element: &Element,
     event_name: &str,
     actions: Vec<String>,
-    engine: &AixEngine,
+    engine: &LaplogosEngine,
 ) -> Result<(), JsValue> {
     let engine = engine.clone();
     let event_name = event_name.to_string();
@@ -147,10 +147,10 @@ fn extract_event_value(event: &Event) -> Option<String> {
 }
 
 pub fn apply_patches(
-    engine: &AixEngine,
+    engine: &LaplogosEngine,
     container_id: &str,
     patches: &[Patch],
-    new_root: &AixNode,
+    new_root: &LaplogosNode,
 ) -> Result<(), JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
     let document = window
@@ -215,7 +215,7 @@ fn find_by_id(document: &Document, id: &str) -> Result<Element, JsValue> {
         .ok_or_else(|| JsValue::from_str(&format!("Element not found: {}", id)))
 }
 
-pub fn render_to_string(node: &AixNode) -> String {
+pub fn render_to_string(node: &LaplogosNode) -> String {
     let tag = match node.t.as_str() {
         "Box" => "div",
         "Txt" => "p",

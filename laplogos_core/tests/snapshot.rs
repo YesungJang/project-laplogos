@@ -1,13 +1,13 @@
-use aix_core::{materialize::materialize_one_root, render_to_string, AixPage, AixState};
+use laplogos_core::{materialize::materialize_one_root, render_to_string, LaplogosPage, LaplogosState};
 use serde_json::Value;
 
 #[test]
 fn deterministic_render_snapshot() {
-    let page: AixPage = serde_json::from_str(
+    let page: LaplogosPage = serde_json::from_str(
         r#"{"v":1,"root":{"i":"root","t":"Box","c":[{"i":"t1","t":"Txt","p":{"val":"$count"}}]}}"#,
     )
     .expect("parse json");
-    let mut state = AixState::default();
+    let mut state = LaplogosState::default();
     state.data.insert(
         "count".to_string(),
         Value::Number(serde_json::Number::from(5)),

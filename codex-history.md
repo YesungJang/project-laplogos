@@ -46,3 +46,4 @@
 2025-12-20 23:10 R2 ディレクトリをlaplogos_core/laplogos_webへ改名
 2025-12-20 23:12 R3 crate名をlaplogos_coreへ変更しwasm-packビルド
 2025-12-20 23:14 R4 render_aixをrender_laplogosに改名
+2025-12-20 23:18 R5 RustのAix*型をLaplogos*に改名しcargo check
