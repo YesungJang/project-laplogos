@@ -12,9 +12,10 @@ mod store;
 pub mod materialize;
 pub mod diff;
 
-use store::{apply_action, normalize_action, validate_action, AixConfig, AixState, ValidatedAction};
+pub use renderer::render_to_string;
+pub use store::AixState;
+use store::{apply_action, normalize_action, validate_action, AixConfig, ValidatedAction};
 use crate::materialize::{materialize_one_root, AixError};
-use crate::diff;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AixPage {

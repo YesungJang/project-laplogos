@@ -1,8 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use aix_core::{materialize::materialize_one_root, AixPage};
-use aix_core::store::AixState;
+use aix_core::{materialize::materialize_one_root, AixPage, AixState};
 use serde_json::Value;
 
 fn load_page(path: &Path) -> AixPage {

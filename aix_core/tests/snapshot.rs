@@ -1,5 +1,4 @@
-use aix_core::{materialize::materialize_one_root, renderer::render_to_string, AixPage};
-use aix_core::store::AixState;
+use aix_core::{materialize::materialize_one_root, render_to_string, AixPage, AixState};
 use serde_json::Value;
 
 #[test]
