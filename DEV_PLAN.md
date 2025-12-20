@@ -114,7 +114,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 ### Task 5.1: Strict Variable Substitution (No Expr)
 
 - [x] **Target:** `aix_core/src/materialize.rs`（Task 5.5 で新設）または `renderer.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 
 **Helper:**
 
@@ -133,7 +133,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 ### Task 5.2: Strict Boolean If
 
 - [x] **Target:** `aix_core/src/materialize.rs`（推奨）または `renderer.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 - **Logic:** State 値が **Boolean(true)** の場合のみ通す
 - `"true"`(文字列), `1`, `null`, 未定義キーは全て false 扱い
 - `if` 判定が非 bool だった場合は warn を残す（ただし挙動は false）
@@ -143,7 +143,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 ### Task 5.3: Global ID Constraint
 
 - [x] **Target:** `aix_core/src/materialize.rs`（推奨）+ `tests/conformance.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 
 **Global Schema Constraint（Fatal）:**
 
@@ -157,7 +157,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 ### Task 5.4: Action-based Input (No Magic Binding)
 
 - [x] **Target:** `aix_core/src/renderer.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 - `Inp` ノード（`<input>`）実装
 - **Validation:** `Inp.p["val"]` は `"$key"` 形式必須（完全一致）。違反は warn + no-op
 - **Action Generation:**
@@ -173,7 +173,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 > **Materialize（解決済みツリー）を必ず生成し、それを Diff/Render の基準にする。**
 
 - [x] **Target:** `aix_core/src/materialize.rs`（新規）
-- [ ] **Spec:**
+- [x] **Spec:**
 
 #### Data Structures
 
@@ -219,7 +219,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 6.0: Engine Loop Update (Materialize → Diff → Patch)
 
 - [x] **Target:** `aix_core/src/lib.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 - `AixEngine` は `last_materialized: Option<AixNode>` を保持する
 - `dispatch` 後のレンダリングフロー:
   1. `new_materialized = materialize_one_root(page.root, state)`
@@ -232,7 +232,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 6.1: Diff Engine & Patch Definition
 
 - [x] **Target:** `aix_core/src/diff.rs`（新規）
-- [ ] **Spec:**
+- [x] **Spec:**
 
 **Enum `Patch`:**
 
@@ -262,7 +262,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 6.2: Patch Applier & DOM Identification
 
 - [x] **Target:** `aix_core/src/renderer.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 
 **Preparation:**
 
@@ -283,7 +283,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 6.3: Focus Guard
 
 - [x] **Target:** `aix_core/src/renderer.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 - `UpdateAttr` で `value` 更新する際、
   - 対象要素が `document.activeElement` と一致する場合は **スキップ**
 - 目的: 入力中の value 上書き/フォーカス喪失を防ぐ
@@ -300,7 +300,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 7.1: Capability System
 
 - [x] **Target:** `aix_core/src/store.rs` & `aix_core/src/lib.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 - `struct AixConfig { allowed_actions: Vec<String>, allowed_hosts: Vec<String> }`
 - `AixEngine::init(config)` で注入可能
 - `dispatch` 直前で `allowed_actions` をチェック（未許可は Drop + log）
@@ -311,7 +311,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 7.2: Async Fetch Action
 
 - [x] **Target:** `aix_core/src/lib.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 
 **Schema (`fetch` ActionSpec.d):**
 
@@ -338,7 +338,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 8.1: Conformance Suite
 
 - [x] **Target:** `tests/conformance.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 - `tests/data/` に `valid_*.json` / `invalid_*.json` を配置
 - 一括テストランナーを作成
   - Valid は成功
@@ -350,7 +350,7 @@ Diff 対象は必ず **Materialized Tree**。
 ### Task 8.2: Deterministic Render Test (Snapshot)
 
 - [x] **Target:** `tests/snapshot.rs`
-- [ ] **Spec:**
+- [x] **Spec:**
 - DOM を触らずに比較できる形にする
   - `materialize_one_root` → `render_to_string(materialized_root)` の純関数パス
 - 「特定の State + JSON」で常に同じ HTML が生成されることを検証
