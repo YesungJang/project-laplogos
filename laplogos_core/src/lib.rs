@@ -309,7 +309,7 @@ pub fn init_panic_hook() {
 }
 
 #[wasm_bindgen]
-pub fn render_aix(json_str: &str, container_id: &str) -> Result<(), JsValue> {
+pub fn render_laplogos(json_str: &str, container_id: &str) -> Result<(), JsValue> {
     let page: AixPage =
         serde_json::from_str(json_str).map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
 
