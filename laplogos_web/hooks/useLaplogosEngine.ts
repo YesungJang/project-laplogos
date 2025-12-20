@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 
 type EngineModule = typeof import("aix_core");
-type Engine = InstanceType<EngineModule["AixEngine"]>;
+type Engine = InstanceType<EngineModule["LaplogosEngine"]>;
 
-type UseAixEngineResult = {
+type UseLaplogosEngineResult = {
   engine: Engine | null;
   dispatch: (actionJson: string) => Promise<void>;
   refreshTrigger: number;
 };
 
-export function useAixEngine(initialJson: string, containerId: string): UseAixEngineResult {
+export function useLaplogosEngine(initialJson: string, containerId: string): UseLaplogosEngineResult {
   const [engine, setEngine] = useState<Engine | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -25,13 +25,13 @@ export function useAixEngine(initialJson: string, containerId: string): UseAixEn
         }
         if (!active) return;
         mod.init_panic_hook();
-        const inst = new mod.AixEngine(initialJson);
+        const inst = new mod.LaplogosEngine(initialJson);
         if (!active) return;
         await inst.rerender(containerId);
         setEngine(inst);
         setRefreshTrigger((v) => v + 1);
       } catch (err) {
-        console.error("Failed to load AIX engine", err);
+        console.error("Failed to load laplogos engine", err);
       }
     };
 

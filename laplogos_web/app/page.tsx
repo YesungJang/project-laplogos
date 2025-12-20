@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { DebugView } from "../components/DebugView";
-import { useAixEngine } from "../hooks/useAixEngine";
+import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
 
 const containerId = "aix-root";
 
@@ -13,7 +13,7 @@ const initialJson = JSON.stringify({
     t: "Box",
     p: { pad: 10 },
     c: [
-      { i: "t1", t: "Txt", p: { val: "Hello AIX" } },
+      { i: "t1", t: "Txt", p: { val: "Hello laplogos" } },
       {
         i: "btn1",
         t: "Btn",
@@ -25,7 +25,7 @@ const initialJson = JSON.stringify({
 });
 
 export default function Home() {
-  const { engine, dispatch, refreshTrigger } = useAixEngine(initialJson, containerId);
+  const { engine, dispatch, refreshTrigger } = useLaplogosEngine(initialJson, containerId);
 
   const sendRandom = useMemo(
     () => () => {
@@ -37,7 +37,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-8 text-slate-900">
-      <h1 className="mb-6 text-2xl font-semibold">AIX Render Demo</h1>
+      <h1 className="mb-6 text-2xl font-semibold">laplogos Render Demo</h1>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
