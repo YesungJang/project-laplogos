@@ -42,3 +42,4 @@
 2025-12-20 21:22 タスク8.2 render_to_stringとsnapshotテストを追加
 2025-12-20 21:31 spec実行で公開APIを調整しテスト通過
 2025-12-20 21:37 Task5以降のSpecチェックとcargo test実行
+2025-12-20 23:06 R1 Aix残骸の棚卸し結果をrename_aix_inventory.mdに整理
