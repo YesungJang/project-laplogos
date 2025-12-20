@@ -142,7 +142,7 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.3: Global ID Constraint
 
-- [ ] **Target:** `aix_core/src/materialize.rs`（推奨）+ `tests/conformance.rs`
+- [x] **Target:** `aix_core/src/materialize.rs`（推奨）+ `tests/conformance.rs`
 - [ ] **Spec:**
 
 **Global Schema Constraint（Fatal）:**

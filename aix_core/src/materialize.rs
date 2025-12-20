@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use crate::store::AixState;
+use crate::{store::AixState, AixNode};
 
 #[derive(Debug, Clone, Default)]
 pub struct MaterializeScope {
@@ -51,4 +51,24 @@ pub fn resolve_if(val: &Value, state: &AixState) -> (bool, Option<String>) {
         Some(_) => (false, Some(format!("if key '{}' is not boolean", key))),
         None => (false, None),
     }
+}
+
+pub fn is_valid_id(id: &str) -> bool {
+    if id.is_empty() {
+        return false;
+    }
+    id.chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':' || c == '-')
+}
+
+pub fn validate_global_ids(node: &AixNode) -> Result<(), String> {
+    if !is_valid_id(&node.i) {
+        return Err(format!("Invalid id: {}", node.i));
+    }
+    if let Some(children) = node.c.as_ref() {
+        for child in children {
+            validate_global_ids(child)?;
+        }
+    }
+    Ok(())
 }
