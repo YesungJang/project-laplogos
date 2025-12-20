@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 mod renderer;
 mod store;
 
-use store::{reduce, Action, AixState};
+use store::{apply_action, normalize_action, validate_action, AixState};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AixPage {
@@ -25,13 +25,14 @@ pub struct AixNode {
     #[serde(rename = "c", default)]
     pub c: Option<Vec<AixNode>>,
     #[serde(rename = "on", default)]
-    pub on: Option<HashMap<String, Vec<String>>>,
+    pub on: Option<HashMap<String, Vec<Value>>>,
 }
 
 #[wasm_bindgen]
 pub struct AixEngine {
     state: AixState,
     page: AixPage,
+    logs: Vec<String>,
 }
 
 #[wasm_bindgen]
@@ -44,6 +45,7 @@ impl AixEngine {
         Ok(AixEngine {
             state: AixState::default(),
             page,
+            logs: Vec::new(),
         })
     }
 
@@ -52,14 +54,54 @@ impl AixEngine {
     }
 
     pub fn dispatch(&mut self, action_json: &str) -> Result<(), JsValue> {
-        let action: Action =
-            serde_json::from_str(action_json).map_err(|e| JsValue::from_str(&format!("Invalid action JSON: {e}")))?;
-        reduce(&mut self.state, action);
+        let raw: Value = match serde_json::from_str(action_json) {
+            Ok(value) => value,
+            Err(e) => {
+                self.log_warn(&format!("Invalid action JSON: {e}"));
+                return Ok(());
+            }
+        };
+
+        let action = match normalize_action(&raw) {
+            Ok(action) => action,
+            Err(err) => {
+                self.log_warn(&err);
+                return Ok(());
+            }
+        };
+
+        let validated = match validate_action(action) {
+            Ok(validated) => validated,
+            Err(err) => {
+                self.log_warn(&err);
+                return Ok(());
+            }
+        };
+
+        let changed = match apply_action(&mut self.state, validated, None) {
+            Ok(changed) => changed,
+            Err(err) => {
+                self.log_warn(&err);
+                return Ok(());
+            }
+        };
+
+        if !changed {
+            return Ok(());
+        }
+
         self.rerender("aix-root")
     }
 
     pub fn rerender(&self, container_id: &str) -> Result<(), JsValue> {
         renderer::update_dom(self, container_id)
+    }
+}
+
+impl AixEngine {
+    fn log_warn(&mut self, message: &str) {
+        web_sys::console::warn_1(&JsValue::from_str(message));
+        self.logs.push(message.to_string());
     }
 }
 

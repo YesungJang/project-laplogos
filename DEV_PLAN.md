@@ -79,8 +79,8 @@ AI ネイティブ時代の次世代 UI ランタイム。Web での完成度（
 
 ### Task 5.0: Action Normalization (ActionSpec)
 
-- [ ] **Target:** `aix_core/src/store.rs` & `aix_core/src/lib.rs`
-- [ ] **Spec:**
+- [x] **Target:** `aix_core/src/store.rs` & `aix_core/src/lib.rs`
+- [x] **Spec:**
 
 **Struct `ActionSpec`:**
 
