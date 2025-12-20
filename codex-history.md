@@ -25,3 +25,4 @@
 2025-12-20 12:04 タスク4.2 useAixEngineをAixEngine生成・dispatchラッパー付きに拡張
 2025-12-20 12:05 タスク4.3 page.tsxを2カラム構成にしDebugViewとdispatchボタンを統合
 2025-12-20 12:15 layout.tsxでsuppressHydrationWarningを追加し拡張由来の属性差分を無視
+2025-12-20 12:23 wasm-packを再ビルドしてAixEngineをpkgに含めた
