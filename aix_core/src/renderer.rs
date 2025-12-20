@@ -1,7 +1,7 @@
-use wasm_bindgen::JsValue;
+use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element};
 
-use crate::AixNode;
+use crate::{AixEngine, AixNode};
 
 fn text_from_value(val: &serde_json::Value) -> String {
     val.as_str().map(|s| s.to_owned()).unwrap_or_else(|| val.to_string())
@@ -40,4 +40,19 @@ pub fn render_node(document: &Document, node: &AixNode) -> Result<Element, JsVal
     }
 
     Ok(element)
+}
+
+pub fn update_dom(engine: &AixEngine, container_id: &str) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
+    let document = window
+        .document()
+        .ok_or_else(|| JsValue::from_str("No document"))?;
+    let container = document
+        .get_element_by_id(container_id)
+        .ok_or_else(|| JsValue::from_str("Container not found"))?;
+
+    container.set_inner_html("");
+    let root_el = render_node(&document, &engine.page.root)?;
+    container.append_child(&root_el)?;
+    Ok(())
 }

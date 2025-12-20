@@ -151,7 +151,7 @@
 
 ### Task 3.4: Re-rendering ロジック
 
-- [ ] **Target:** `aix_core/src/renderer.rs`
+- [x] **Target:** `aix_core/src/renderer.rs`
 - **Spec:**
 - `render_node` を修正し、イベントリスナーを付与できるようにする。
 - **Logic:**

@@ -55,7 +55,11 @@ impl AixEngine {
         let action: Action =
             serde_json::from_str(action_json).map_err(|e| JsValue::from_str(&format!("Invalid action JSON: {e}")))?;
         reduce(&mut self.state, action);
-        Ok(())
+        self.rerender("aix-root")
+    }
+
+    pub fn rerender(&self, container_id: &str) -> Result<(), JsValue> {
+        renderer::update_dom(self, container_id)
     }
 }
 

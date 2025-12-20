@@ -20,3 +20,4 @@
 2025-12-20 11:55 タスク3.1 store.rsにAixState/Action/reduceを実装
 2025-12-20 11:56 タスク3.2 AixEngine構造体をlib.rsに追加し状態保持を実装
 2025-12-20 12:00 タスク3.3 dispatchでAction JSONをreduceに渡す処理を追加
+2025-12-20 12:01 タスク3.4 rendererにupdate_domとrerender連携を追加
