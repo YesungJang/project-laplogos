@@ -53,3 +53,5 @@
 2025-12-20 23:30 R9 README/DEV_PLANのLaplogos表記をlaplogosへ統一
 2025-12-20 23:41 R10 旧名残骸の最終クリーンアップ
 2025-12-20 23:48 R11 フルビルド検証とテスト実行
+2025-12-20 23:54 Task5-8 Spec再実行（cargo test）
+2025-12-21 00:00 Dispatch random count のActionSpecを修正

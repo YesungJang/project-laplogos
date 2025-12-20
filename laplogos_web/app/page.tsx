@@ -17,8 +17,8 @@ const initialJson = JSON.stringify({
       {
         i: "btn1",
         t: "Btn",
-        p: { label: "Set random count" },
-        on: { click: ["Set", "count", "demo"] },
+        p: { label: "Set demo count" },
+        on: { click: [{ t: "set", d: { key: "count", val: "demo" } }] },
       },
     ],
   },
@@ -30,7 +30,7 @@ export default function Home() {
   const sendRandom = useMemo(
     () => () => {
       const val = Math.random().toString(36).slice(2, 7);
-      dispatch(JSON.stringify({ type: "Set", key: "count", val }));
+      dispatch(JSON.stringify({ t: "set", d: { key: "count", val } }));
     },
     [dispatch]
   );
