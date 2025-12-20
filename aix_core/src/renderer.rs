@@ -214,3 +214,70 @@ fn find_by_id(document: &Document, id: &str) -> Result<Element, JsValue> {
         .query_selector(&selector)?
         .ok_or_else(|| JsValue::from_str(&format!("Element not found: {}", id)))
 }
+
+pub fn render_to_string(node: &AixNode) -> String {
+    let tag = match node.t.as_str() {
+        "Box" => "div",
+        "Txt" => "p",
+        "Btn" => "button",
+        "Inp" => "input",
+        _ => "div",
+    };
+
+    let mut attrs = vec![
+        format!("id=\"{}\"", escape_attr(&node.i)),
+        format!("data-aix-id=\"{}\"", escape_attr(&node.i)),
+    ];
+
+    match node.t.as_str() {
+        "Inp" => {
+            if let Some(val) = node.p.get("val") {
+                attrs.push(format!("value=\"{}\"", escape_attr(&text_from_value(val))));
+            }
+        }
+        _ => {}
+    }
+
+    let attr_text = if attrs.is_empty() {
+        "".to_string()
+    } else {
+        format!(" {}", attrs.join(" "))
+    };
+
+    if tag == "input" {
+        return format!("<{tag}{attr_text}/>");
+    }
+
+    let mut inner = String::new();
+    match node.t.as_str() {
+        "Txt" => {
+            if let Some(val) = node.p.get("val") {
+                inner.push_str(&escape_text(&text_from_value(val)));
+            }
+        }
+        "Btn" => {
+            if let Some(label) = node.p.get("label") {
+                inner.push_str(&escape_text(&text_from_value(label)));
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(children) = node.c.as_ref() {
+        for child in children {
+            inner.push_str(&render_to_string(child));
+        }
+    }
+
+    format!("<{tag}{attr_text}>{inner}</{tag}>")
+}
+
+fn escape_text(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+fn escape_attr(text: &str) -> String {
+    escape_text(text).replace('"', "&quot;")
+}

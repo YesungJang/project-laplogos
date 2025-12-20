@@ -39,3 +39,4 @@
 2025-12-20 21:14 タスク7.1 Capability設定とallowed_actions/hostsチェックを追加
 2025-12-20 21:17 タスク7.2 fetchアクションの非同期実行とallowed_hosts検証を実装
 2025-12-20 21:20 タスク8.1 conformanceテストとtests/dataのvalid/invalid JSONを追加
+2025-12-20 21:22 タスク8.2 render_to_stringとsnapshotテストを追加

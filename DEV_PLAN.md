@@ -349,7 +349,7 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 8.2: Deterministic Render Test (Snapshot)
 
-- [ ] **Target:** `tests/snapshot.rs`
+- [x] **Target:** `tests/snapshot.rs`
 - [ ] **Spec:**
 - DOM を触らずに比較できる形にする
   - `materialize_one_root` → `render_to_string(materialized_root)` の純関数パス
