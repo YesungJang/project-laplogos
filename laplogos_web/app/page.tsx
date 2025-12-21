@@ -1,4 +1,8 @@
+import { readFile } from "fs/promises";
+import { resolve } from "path";
 import { LaplogosApp } from "../components/LaplogosApp";
+
+export const runtime = "nodejs";
 
 const initialPage = {
   v: 1,
@@ -20,12 +24,27 @@ const initialPage = {
 
 const initialState = {};
 
-async function renderLaplogosHtml(page: unknown, state: unknown) {
-  const mod = await import("laplogos_core");
+async function initLaplogosWasm(mod: typeof import("laplogos_core")) {
+  if (typeof mod.initSync === "function") {
+    const wasmPath = resolve(process.cwd(), "../laplogos_core/pkg/laplogos_core_bg.wasm");
+    const wasmBytes = await readFile(wasmPath);
+    mod.initSync(wasmBytes);
+    return;
+  }
   if (typeof mod.default === "function") {
     await mod.default();
   }
-  return mod.render_laplogos_to_string(page, state);
+}
+
+async function renderLaplogosHtml(page: unknown, state: unknown) {
+  try {
+    const mod = await import("laplogos_core");
+    await initLaplogosWasm(mod);
+    return mod.render_laplogos_to_string(page, state);
+  } catch (err) {
+    console.error("Failed to render laplogos SSR", err);
+    return "";
+  }
 }
 
 export default async function Home() {
