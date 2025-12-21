@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 type EngineModule = typeof import("laplogos_core");
-type Engine = InstanceType<EngineModule["LaplogosEngine"]>;
+type Engine = InstanceType<EngineModule["LaplogosEngine"]> & {
+  set_on_nav: (cb: (to: string) => void) => void;
+  set_page_json: (json: string) => void;
+  set_state_json: (json: string) => void;
+  hydrate: (containerId: string) => void;
+  rerender: (containerId: string) => void;
+  dispatch: (actionJson: string) => void;
+};
+
+type BootstrapPayload = {
+  page?: unknown;
+  state?: unknown;
+};
 
 type UseLaplogosEngineResult = {
   engine: Engine | null;
@@ -9,15 +22,65 @@ type UseLaplogosEngineResult = {
   refreshTrigger: number;
 };
 
+function isExternalUrl(to: string) {
+  return /^https?:\/\//i.test(to);
+}
+
+async function fetchPageJson(pathname: string, fallbackJson: string) {
+  try {
+    const res = await fetch(`/api/laplogos?page=${encodeURIComponent(pathname)}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return fallbackJson;
+    const data = await res.json();
+    return JSON.stringify(data);
+  } catch {
+    return fallbackJson;
+  }
+}
+
+function readBootstrap(): { pageJson: string; stateJson: string } | null {
+  const el = document.getElementById("laplogos-bootstrap");
+  const text = el?.textContent?.trim();
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text) as BootstrapPayload;
+    if (!parsed || typeof parsed !== "object" || !parsed.page) return null;
+    const state = parsed.state ?? {};
+    return {
+      pageJson: JSON.stringify(parsed.page),
+      stateJson: JSON.stringify(state),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function useLaplogosEngine(initialJson: string, containerId: string): UseLaplogosEngineResult {
   const [engine, setEngine] = useState<Engine | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const onNav = useCallback(
+    (to: string) => {
+      if (isExternalUrl(to)) {
+        window.location.assign(to);
+        return;
+      }
+      router.push(to);
+    },
+    [router]
+  );
 
   useEffect(() => {
     let active = true;
 
     const load = async () => {
       try {
+        const bootstrap = readBootstrap();
+        const pageJson = bootstrap?.pageJson ?? initialJson;
+        const stateJson = bootstrap?.stateJson ?? "{}";
         const mod = await import("laplogos_core");
         if (!active) return;
         if (typeof mod.default === "function") {
@@ -25,9 +88,15 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         }
         if (!active) return;
         mod.init_panic_hook();
-        const inst = new mod.LaplogosEngine(initialJson);
+        const inst = new mod.LaplogosEngine(pageJson);
         if (!active) return;
-        await inst.rerender(containerId);
+        inst.set_on_nav(onNav);
+        inst.set_state_json(stateJson);
+        if (bootstrap) {
+          await inst.hydrate(containerId);
+        } else {
+          await inst.rerender(containerId);
+        }
         setEngine(inst);
         setRefreshTrigger((v) => v + 1);
       } catch (err) {
@@ -40,7 +109,30 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
     return () => {
       active = false;
     };
-  }, [initialJson, containerId]);
+  }, [initialJson, containerId, onNav]);
+
+  useEffect(() => {
+    if (!engine) return;
+    let active = true;
+
+    const update = async () => {
+      try {
+        const pageJson = await fetchPageJson(pathname, initialJson);
+        if (!active) return;
+        engine.set_page_json(pageJson);
+        await engine.rerender(containerId);
+        setRefreshTrigger((v) => v + 1);
+      } catch (err) {
+        console.error("Failed to update page", err);
+      }
+    };
+
+    update();
+
+    return () => {
+      active = false;
+    };
+  }, [engine, pathname, initialJson, containerId]);
 
   const dispatch = useCallback(
     async (actionJson: string) => {

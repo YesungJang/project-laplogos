@@ -41,6 +41,7 @@ pub enum ValidatedAction {
         on_success: Vec<Value>,
         on_fail: Vec<Value>,
     },
+    Nav { to: String },
 }
 
 #[derive(Debug, Clone)]
@@ -149,6 +150,15 @@ pub fn validate_action(action: ActionSpec) -> Result<ValidatedAction, String> {
                 on_fail,
             })
         }
+        "nav" => {
+            let to = action
+                .d
+                .get("to")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "nav.to must be a string".to_string())?
+                .to_string();
+            Ok(ValidatedAction::Nav { to })
+        }
         _ => Err(format!("Unknown action type: {}", action.t)),
     }
 }
@@ -187,5 +197,6 @@ pub fn apply_action(
             Ok(true)
         }
         ValidatedAction::Fetch { .. } => Err("fetch cannot be applied directly".to_string()),
+        ValidatedAction::Nav { .. } => Err("nav cannot be applied directly".to_string()),
     }
 }

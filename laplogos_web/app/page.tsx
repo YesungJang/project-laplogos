@@ -1,62 +1,50 @@
-'use client';
+import { readFile } from "fs/promises";
+import { resolve } from "path";
+import { LaplogosApp } from "../components/LaplogosApp";
+import { getPageSchema } from "./laplogos-schema";
 
-import { useMemo } from "react";
-import { DebugView } from "../components/DebugView";
-import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
+export const runtime = "nodejs";
 
-const containerId = "laplogos-root";
+const initialPage = getPageSchema("/");
 
-const initialJson = JSON.stringify({
-  v: 1,
-  root: {
-    i: "root",
-    t: "Box",
-    p: { pad: 10 },
-    c: [
-      { i: "t1", t: "Txt", p: { val: "Hello laplogos" } },
-      {
-        i: "btn1",
-        t: "Btn",
-        p: { label: "Set demo count" },
-        on: { click: [{ t: "set", d: { key: "count", val: "demo" } }] },
-      },
-    ],
-  },
-});
+const initialState = {};
 
-export default function Home() {
-  const { engine, dispatch, refreshTrigger } = useLaplogosEngine(initialJson, containerId);
+async function initLaplogosWasm(mod: typeof import("laplogos_core")) {
+  if (typeof mod.initSync === "function") {
+    const wasmPath = resolve(process.cwd(), "../laplogos_core/pkg/laplogos_core_bg.wasm");
+    const wasmBytes = await readFile(wasmPath);
+    mod.initSync({ module: wasmBytes });
+    return;
+  }
+  if (typeof mod.default === "function") {
+    await mod.default();
+  }
+}
 
-  const sendRandom = useMemo(
-    () => () => {
-      const val = Math.random().toString(36).slice(2, 7);
-      dispatch(JSON.stringify({ t: "set", d: { key: "count", val } }));
-    },
-    [dispatch]
+async function renderLaplogosHtml(page: unknown, state: unknown) {
+  try {
+    const mod = await import("laplogos_core");
+    await initLaplogosWasm(mod);
+    return mod.render_laplogos_to_string(page, state);
+  } catch (err) {
+    console.error("Failed to render laplogos SSR", err);
+    return "";
+  }
+}
+
+export default async function Home() {
+  const renderedHtml = await renderLaplogosHtml(initialPage, initialState);
+  const bootstrapJson = JSON.stringify({ page: initialPage, state: initialState }).replace(
+    /</g,
+    "\\u003c"
   );
+  const initialJson = JSON.stringify(initialPage);
 
   return (
-    <main className="min-h-screen bg-slate-50 p-8 text-slate-900">
-      <h1 className="mb-6 text-2xl font-semibold">laplogos Render Demo</h1>
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">App</h2>
-            <button
-              onClick={sendRandom}
-              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              disabled={!engine}
-            >
-              Dispatch random count
-            </button>
-          </div>
-          <div
-            id={containerId}
-            className="min-h-[200px] rounded-md border border-slate-200 bg-slate-50 p-3"
-          />
-        </section>
-        <DebugView engine={engine} refreshTrigger={refreshTrigger} />
-      </div>
-    </main>
+    <LaplogosApp
+      initialJson={initialJson}
+      bootstrapJson={bootstrapJson}
+      renderedHtml={renderedHtml}
+    />
   );
 }

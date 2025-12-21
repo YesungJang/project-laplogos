@@ -17,6 +17,7 @@ pub fn render_node(
         "Txt" => "p",
         "Btn" => "button",
         "Inp" => "input",
+        "Lnk" => "a",
         _ => "div",
     };
 
@@ -50,6 +51,18 @@ pub fn render_node(
                     .to_string();
                     attach_event_listener(&element, "input", vec![action_json], engine)?;
                 }
+            }
+        }
+        "Lnk" => {
+            if let Some(href) = node.p.get("href") {
+                let href_text = text_from_value(href);
+                element.set_attribute("href", &href_text)?;
+                if let Some(engine) = engine {
+                    attach_nav_listener(&element, &href_text, engine)?;
+                }
+            }
+            if let Some(label) = node.p.get("label") {
+                element.set_text_content(Some(&text_from_value(label)));
             }
         }
         _ => {}
@@ -117,6 +130,69 @@ pub fn update_dom_with_root(
     Ok(())
 }
 
+pub fn bind_events(engine: &LaplogosEngine, root: &LaplogosNode) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
+    let document = window
+        .document()
+        .ok_or_else(|| JsValue::from_str("No document"))?;
+    bind_events_for_node(&document, root, engine)
+}
+
+fn bind_events_for_node(
+    document: &Document,
+    node: &LaplogosNode,
+    engine: &LaplogosEngine,
+) -> Result<(), JsValue> {
+    let element = find_by_id(document, &node.i)?;
+
+    match node.t.as_str() {
+        "Inp" => {
+            if let Some(val) = node.p.get("val").and_then(|v| v.as_str()) {
+                if !val.starts_with('$') || val.len() <= 1 {
+                    engine.log_warn("Inp.p.val must be $key");
+                } else {
+                    let key = val.trim_start_matches('$').to_string();
+                    let action_json = serde_json::json!({
+                        "t": "set",
+                        "d": { "key": key, "val_from": "event.value" }
+                    })
+                    .to_string();
+                    attach_event_listener(&element, "input", vec![action_json], engine)?;
+                }
+            }
+        }
+        "Lnk" => {
+            if let Some(href) = node.p.get("href") {
+                let href_text = text_from_value(href);
+                attach_nav_listener(&element, &href_text, engine)?;
+            }
+        }
+        _ => {}
+    }
+
+    if let Some(on) = node.on.as_ref() {
+        for (event_name, actions) in on {
+            let mut action_jsons = Vec::new();
+            for action in actions {
+                if let Ok(text) = serde_json::to_string(action) {
+                    action_jsons.push(text);
+                }
+            }
+            if !action_jsons.is_empty() {
+                attach_event_listener(&element, event_name, action_jsons, engine)?;
+            }
+        }
+    }
+
+    if let Some(children) = node.c.as_ref() {
+        for child in children {
+            bind_events_for_node(document, child, engine)?;
+        }
+    }
+
+    Ok(())
+}
+
 fn attach_event_listener(
     element: &Element,
     event_name: &str,
@@ -135,6 +211,30 @@ fn attach_event_listener(
     }) as Box<dyn FnMut(_)>);
 
     element.add_event_listener_with_callback(&event_name, closure.as_ref().unchecked_ref())?;
+    closure.forget();
+    Ok(())
+}
+
+fn attach_nav_listener(
+    element: &Element,
+    href: &str,
+    engine: &LaplogosEngine,
+) -> Result<(), JsValue> {
+    let engine = engine.clone();
+    let href = href.to_string();
+    let closure = Closure::wrap(Box::new(move |event: Event| {
+        event.prevent_default();
+        let action = serde_json::json!({
+            "t": "nav",
+            "d": { "to": href }
+        })
+        .to_string();
+        if let Err(err) = engine.dispatch_with_event(&action, None) {
+            web_sys::console::warn_1(&err);
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    element.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
     closure.forget();
     Ok(())
 }
@@ -221,6 +321,7 @@ pub fn render_to_string(node: &LaplogosNode) -> String {
         "Txt" => "p",
         "Btn" => "button",
         "Inp" => "input",
+        "Lnk" => "a",
         _ => "div",
     };
 
@@ -233,6 +334,11 @@ pub fn render_to_string(node: &LaplogosNode) -> String {
         "Inp" => {
             if let Some(val) = node.p.get("val") {
                 attrs.push(format!("value=\"{}\"", escape_attr(&text_from_value(val))));
+            }
+        }
+        "Lnk" => {
+            if let Some(href) = node.p.get("href") {
+                attrs.push(format!("href=\"{}\"", escape_attr(&text_from_value(href))));
             }
         }
         _ => {}
@@ -256,6 +362,11 @@ pub fn render_to_string(node: &LaplogosNode) -> String {
             }
         }
         "Btn" => {
+            if let Some(label) = node.p.get("label") {
+                inner.push_str(&escape_text(&text_from_value(label)));
+            }
+        }
+        "Lnk" => {
             if let Some(label) = node.p.get("label") {
                 inner.push_str(&escape_text(&text_from_value(label)));
             }

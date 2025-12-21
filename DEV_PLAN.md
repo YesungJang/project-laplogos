@@ -359,9 +359,154 @@ Diff 対象は必ず **Materialized Tree**。
 
 ## 🧱 Stage 2.5: Web Production Readiness
 
-- Phase 9: Token Optimization（Def/Ref, Style Dict）
-- Phase 10: Router / SPA
-- Phase 11: SSR & Hydration
+**Goal:** Web 版として「完成」させる（トークン効率化 / SPA 対応 / SSR+Hydration による SEO）。  
+**Principle:** Core（Materialize / Diff / Patch）は「正規化済みのきれいなツリー」だけを扱い、複雑さを前処理（Normalize）に隔離する。
+
+---
+
+## Phase 9: Token Optimization（Normalization Layer）
+
+**方針:** 圧縮表現（Def/Ref, Style Dict）を **Normalize（正規化）で展開**し、以降のコアは常に **Schema v1（正規）**だけを処理する。
+
+### Task 9.1: Packed Schema（Def/Ref + Style Dict）定義
+
+ - [x] **Target:** `laplagos_core/src/lib.rs`（Schema 拡張） or `laplagos_core/src/schema_packed.rs`（新規）
+ - [x] **Spec:**
+  - `LaplagosPage`（または PackedPage）に以下を追加（存在すれば packed とみなす）
+    - `defs: HashMap<String, LaplagosNode>`（定義ノード。`i` は持たない前提）
+    - `styles: HashMap<String, HashMap<String, String>>`（共通スタイル辞書。値は必ず String）
+  - `LaplagosNode` に以下を optional で追加（packed 表現用）
+    - `r: Option<String>`（Ref: defs 参照 ID）
+    - `st: Option<String>`（Style 参照 ID）
+    - `o: Option<HashMap<String, serde_json::Value>>`（override。`p` の上書き専用）
+  - **Validation（Fatal）**
+    - `r` が defs に無い / `st` が styles に無い → Fatal
+    - `o` が `p` 以外（children 等）を上書きしようとする → Fatal
+    - `styles[*]` の value が String 以外 → Fatal
+
+### Task 9.2: Normalize 実装（Packed → 正規 Schema v1）
+
+ - [x] **Target:** `laplagos_core/src/normalize.rs`（新規）
+ - [x] **Spec:**
+  - `fn normalize_page(input: serde_json::Value) -> Result<LaplagosPage, LaplagosError>`
+  - 入力が通常 v1 ならそのままパース。packed なら以下を実施:
+    1. `r` を deep clone で展開（参照側ノードの `i` を必須扱い）
+    2. `o` があれば `p` に **上書きマージ**（`p` 以外は上書き禁止）
+    3. `st` があれば `styles[st]` を `p` に **不足分のみマージ**（既存 `p` を優先）
+    4. 生成結果から `defs/styles/r/st/o` を全て除去し、**正規 v1 のみ**にする
+  - **Note:** Global ID Constraint や Loop 制約など “既存の Schema ルール” は緩和しない（Normalize は展開だけ）。
+
+### Task 9.3: Normalize Conformance テスト追加
+
+ - [x] **Target:** `tests/conformance.rs` + `tests/data/`
+ - [x] **Spec:**
+  - `valid_packed_*.json` / `invalid_packed_*.json` を追加
+  - invalid 例:
+    - 未定義 `r` / 未定義 `st`
+    - `o` が `p` 以外を書き換え
+    - `styles` の値が String 以外
+  - 期待挙動: Fatal で落ちる（ただし panic しない / ログが残る）
+
+### Task 9.4: Engine Loop 先頭に Normalize を挿入（重要）
+
+ - [x] **Target:** `laplagos_core/src/lib.rs`
+ - [x] **Spec:**
+  - **Task 6.x（Materialize→Diff→Patch→DOM）のフローの先頭**に `normalize_page` を追加する
+  - Engine が保持するページは `normalized_page: LaplagosPage` に統一
+  - `set_page(...)` / 初期化入口で Normalize → 以降は normalized_page のみを参照
+
+---
+
+## Phase 10: Router / SPA（Core minimal / Web 主導）
+
+**方針:** Core は「遷移要求（nav）」と「通知（callback）」だけを持つ。  
+実際のルーティング（Next.js router、履歴管理、ページ JSON 取得）は **laplagos_web** が担当。
+
+### Task 10.1: `nav` ActionSpec 追加（Core 側は通知のみ）
+
+- [x] **Target:** `laplagos_core/src/store.rs` & `laplagos_core/src/lib.rs`
+- [x] **Spec:**
+  - `t: "nav"`
+  - `d["to"]: String` 必須
+  - Capability:
+    - `allowed_actions` に `nav` が無ければ Drop
+    - `to` が外部 URL の場合、host を `allowed_hosts` と照合（不一致は Drop）
+  - 実行:
+    - Core は遷移しない。`on_nav(to)` コールバックを呼ぶ（未設定なら warn + Drop）
+
+### Task 10.2: `Lnk` ノード（リンク UI）
+
+- [x] **Target:** `laplagos_core/src/lib.rs`（Node type 追加） & `laplagos_core/src/renderer.rs`
+- [x] **Spec:**
+  - `t: "Lnk"`
+  - `p["href"]: String` 必須
+  - `p["label"]: String` 必須
+  - Render: `<a href="...">label</a>`
+  - click で `preventDefault` → `dispatch(nav{to:href})`
+  - **推奨:** `Task 5.1 resolve_text` の対象に `Lnk.p["label"]` を追加（Phase 10 実装時で OK）
+
+### Task 10.3: Web 側 Router 統合（Next.js）
+
+- [x] **Target:** `laplagos_web`（`useLaplagosEngine` など）
+- [x] **Spec:**
+  - Engine init 時に `on_nav` を注入
+  - `on_nav(to)`:
+    - app 内 path → `router.push(to)`
+    - 外部 URL → `window.location.assign(to)`（Core 側で allowed_hosts を通っている前提）
+  - route 変更時に schema を取得し `engine.set_page(page_json)` を呼ぶ
+
+### Task 10.4: History / Popstate 最低限同期
+
+- [x] **Target:** `laplagos_web`
+- [x] **Spec:**
+  - 初期表示: 現在 path から schema 解決して set_page
+  - 戻る/進む: path 変化を検知して schema 再ロード → set_page
+
+---
+
+## Phase 11: SSR & Hydration（失敗時フォールバック）
+
+**方針:** SSR で SEO 用 HTML を生成し、クライアントで Hydration（イベント接続）を行う。  
+Hydration 失敗時は **フル再描画（root replace）にフォールバック**して「画面真っ白」を回避する。
+
+### Task 11.1: SSR 向け `render_to_string` API（Core）
+
+ - [x] **Target:** `laplagos_core/src/lib.rs`
+ - [x] **Spec:**
+  - `render_laplagos_to_string(page_json: JsValue, state_json: JsValue) -> Result<String, JsValue>`
+  - 内部フロー（純関数）:
+    1. Normalize（Phase 9）
+    2. Materialize（Task 5.5 がある前提）
+    3. HTML 文字列化（サーバ用レンダラー）
+
+### Task 11.2: Next.js SSR 組み込み + JSON 埋め込み（XSS 対策を明記）
+
+ - [x] **Target:** `laplagos_web`（SSR 実装箇所）
+ - [x] **Spec:**
+  - サーバで `render_laplagos_to_string` を呼び HTML 出力
+  - 初期データ（page/state）を `<script type="application/json">` に埋め込む
+  - **XSS 対策（必須）**
+    - `JSON.stringify(data)` の結果に含まれる `<` を `\\u003c` に置換して埋め込む
+    - （例）`safe = json.replace(/</g, "\\u003c")`
+
+### Task 11.3: Hydration（イベントのみ接続）+ 不一致時フォールバック
+
+ - [x] **Target:** `laplagos_core/src/renderer.rs` + `laplagos_web`
+ - [x] **Spec:**
+  - クライアント起動時:
+    1. bootstrap JSON を読む
+    2. Normalize → Materialize して `materialized_tree` を作る
+    3. **Hydration 専用 `bind_events(materialized_tree)`** を実行（DOM は作らない）
+       - `data-laplagos-id` で DOM を特定してイベントを貼る
+       - DOM が見つからない / 失敗 → Error Log 記録 → **root replace でフル再描画**
+    4. 成功時: `last_materialized = materialized_tree` として通常ループへ
+
+### Task 11.4: Hydration 不安定要因の吸収（最小）
+
+- [x] **Target:** `laplagos_web`
+- [x] **Spec:**
+  - 拡張機能等による微差分で警告が出る箇所は必要最小限で `suppressHydrationWarning` を使う
+  - ただし UI の正当性は Core の Materialize/Diff/Patch を正とする（Hydration は補助）
 
 ---
 

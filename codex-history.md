@@ -61,3 +61,19 @@
 2025-12-21 00:46 MCP接続の確認を実施
 2025-12-21 01:19 MCP接続状況を確認
 2025-12-21 01:52 PR作成・マージ完了
+2025-12-21 02:46 Task 9.1: Packed Schema定義をlaplogos_coreに追加
+2025-12-21 02:48 Task 9.2: packed->v1のnormalize実装を追加
+2025-12-21 02:50 Task 9.3: packed用conformanceテストを追加
+2025-12-21 02:51 Task 9.4: Engine初期化/更新でnormalizeを通すよう変更
+2025-12-21 02:52 Task 11.1: SSR用render_laplogos_to_stringを追加
+2025-12-21 02:53 Task 11.2: SSRでHTML生成と安全なbootstrap JSON埋め込み
+2025-12-21 02:56 Task 11.3: Hydration用のイベントbindと起動フローを追加
+2025-12-21 02:56 Task 11.4: 最小限のsuppressHydrationWarningを追加
+2025-12-21 09:08 Task 10.1: nav Actionとon_navコールバックを追加
+2025-12-21 09:09 Task 10.2: Lnkノードの描画とnavイベントを追加
+2025-12-21 09:10 Task 10.3: on_nav連携とルート変化でのページ更新を追加
+2025-12-21 09:10 Task 10.4: popstate対応としてpath変化で再読み込み
+2025-12-21 09:16 SSR時のWasm初期化をNode対応にして500回避
+2025-12-21 09:36 devの500回避のためWasm初期化とwebpack設定を調整
+2025-12-21 09:46 dev警告と/api/laplogos 404解消のためSSR初期化とAPIを調整
+2025-12-21 09:48 エラー対応による設計意図の逸脱有無を確認
