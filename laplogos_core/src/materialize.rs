@@ -205,6 +205,13 @@ fn apply_text(node: &mut LaplogosNode, state: &LaplogosState, scope: &Materializ
                     .insert("label".to_string(), Value::String(resolved));
             }
         }
+        "Lnk" => {
+            if let Some(label) = node.p.get("label") {
+                let resolved = resolve_text(label, state, scope);
+                node.p
+                    .insert("label".to_string(), Value::String(resolved));
+            }
+        }
         "Inp" => {
             if let Some(val) = node.p.get("val") {
                 let resolved = resolve_text(val, state, scope);

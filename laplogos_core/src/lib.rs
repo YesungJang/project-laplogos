@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use js_sys::JSON;
+use js_sys::{Function, JSON};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
@@ -65,6 +65,7 @@ struct LaplogosEngineInner {
     logs: Vec<String>,
     last_materialized: Option<LaplogosNode>,
     config: Option<LaplogosConfig>,
+    on_nav: Option<Function>,
 }
 
 impl Clone for LaplogosEngine {
@@ -90,6 +91,7 @@ impl LaplogosEngine {
                 logs: Vec::new(),
                 last_materialized: None,
                 config: None,
+                on_nav: None,
             })),
         })
     }
@@ -114,6 +116,10 @@ impl LaplogosEngine {
             .collect();
         self.inner.borrow_mut().config = Some(config);
         Ok(())
+    }
+
+    pub fn set_on_nav(&self, callback: Function) {
+        self.inner.borrow_mut().on_nav = Some(callback);
     }
 
     pub fn dispatch(&self, action_json: &str) -> Result<(), JsValue> {
@@ -217,6 +223,10 @@ impl LaplogosEngine {
                 on_fail,
             } => {
                 self.spawn_fetch(url, on_success, on_fail);
+                Ok(())
+            }
+            ValidatedAction::Nav { to } => {
+                self.handle_nav(to);
                 Ok(())
             }
             other => {
@@ -355,6 +365,31 @@ impl LaplogosEngine {
             None => false,
         }
     }
+
+    fn handle_nav(&self, to: String) {
+        if is_external_url(&to) {
+            let parsed = match web_sys::Url::new(&to) {
+                Ok(url) => url,
+                Err(_) => {
+                    self.log_warn("nav.to is invalid");
+                    return;
+                }
+            };
+            let host = parsed.host().to_lowercase();
+            if host.is_empty() || !self.is_host_allowed(&host) {
+                self.log_warn("nav host is not allowed");
+                return;
+            }
+        }
+
+        let callback = self.inner.borrow().on_nav.clone();
+        match callback {
+            Some(callback) => {
+                let _ = callback.call1(&JsValue::NULL, &JsValue::from_str(&to));
+            }
+            None => self.log_warn("on_nav is not set"),
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -413,4 +448,9 @@ fn parse_state(value: Value) -> Result<LaplogosState, JsValue> {
         }),
         _ => Err(JsValue::from_str("State JSON must be an object")),
     }
+}
+
+fn is_external_url(to: &str) -> bool {
+    let lower = to.to_ascii_lowercase();
+    lower.starts_with("http://") || lower.starts_with("https://")
 }

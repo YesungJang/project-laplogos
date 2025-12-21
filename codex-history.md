@@ -69,3 +69,7 @@
 2025-12-21 02:53 Task 11.2: SSRでHTML生成と安全なbootstrap JSON埋め込み
 2025-12-21 02:56 Task 11.3: Hydration用のイベントbindと起動フローを追加
 2025-12-21 02:56 Task 11.4: 最小限のsuppressHydrationWarningを追加
+2025-12-21 09:08 Task 10.1: nav Actionとon_navコールバックを追加
+2025-12-21 09:09 Task 10.2: Lnkノードの描画とnavイベントを追加
+2025-12-21 09:10 Task 10.3: on_nav連携とルート変化でのページ更新を追加
+2025-12-21 09:10 Task 10.4: popstate対応としてpath変化で再読み込み

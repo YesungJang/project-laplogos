@@ -424,8 +424,8 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 10.1: `nav` ActionSpec 追加（Core 側は通知のみ）
 
-- [ ] **Target:** `laplagos_core/src/store.rs` & `laplagos_core/src/lib.rs`
-- [ ] **Spec:**
+- [x] **Target:** `laplagos_core/src/store.rs` & `laplagos_core/src/lib.rs`
+- [x] **Spec:**
   - `t: "nav"`
   - `d["to"]: String` 必須
   - Capability:
@@ -436,8 +436,8 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 10.2: `Lnk` ノード（リンク UI）
 
-- [ ] **Target:** `laplagos_core/src/lib.rs`（Node type 追加） & `laplagos_core/src/renderer.rs`
-- [ ] **Spec:**
+- [x] **Target:** `laplagos_core/src/lib.rs`（Node type 追加） & `laplagos_core/src/renderer.rs`
+- [x] **Spec:**
   - `t: "Lnk"`
   - `p["href"]: String` 必須
   - `p["label"]: String` 必須
@@ -447,8 +447,8 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 10.3: Web 側 Router 統合（Next.js）
 
-- [ ] **Target:** `laplagos_web`（`useLaplagosEngine` など）
-- [ ] **Spec:**
+- [x] **Target:** `laplagos_web`（`useLaplagosEngine` など）
+- [x] **Spec:**
   - Engine init 時に `on_nav` を注入
   - `on_nav(to)`:
     - app 内 path → `router.push(to)`
@@ -457,8 +457,8 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 10.4: History / Popstate 最低限同期
 
- - [x] **Target:** `laplagos_web`
- - [x] **Spec:**
+- [x] **Target:** `laplagos_web`
+- [x] **Spec:**
   - 初期表示: 現在 path から schema 解決して set_page
   - 戻る/進む: path 変化を検知して schema 再ロード → set_page
 
@@ -503,8 +503,8 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 ### Task 11.4: Hydration 不安定要因の吸収（最小）
 
-- [ ] **Target:** `laplagos_web`
-- [ ] **Spec:**
+- [x] **Target:** `laplagos_web`
+- [x] **Spec:**
   - 拡張機能等による微差分で警告が出る箇所は必要最小限で `suppressHydrationWarning` を使う
   - ただし UI の正当性は Core の Materialize/Diff/Patch を正とする（Hydration は補助）
 
