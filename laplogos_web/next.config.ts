@@ -18,8 +18,12 @@ const nextConfig: NextConfig = {
     }
     if (isServer) {
       const externals = config.externals ?? [];
-      const handler = (ctx: unknown, req: string, cb: (err?: Error | null, result?: string) => void) => {
-        if (req === "laplogos_core") {
+      type ExternalsData = { context?: string; request?: string };
+      type ExternalsCallback = (err?: Error | null, result?: string) => void;
+      type ExternalsFunction = (data: ExternalsData, callback: ExternalsCallback) => void;
+
+      const handler: ExternalsFunction = ({ request }, cb) => {
+        if (request === "laplogos_core") {
           return cb(null, "commonjs laplogos_core");
         }
         return cb();
@@ -28,15 +32,12 @@ const nextConfig: NextConfig = {
       if (Array.isArray(externals)) {
         config.externals = [...externals, handler];
       } else if (typeof externals === "function") {
-        config.externals = (
-          ctx: unknown,
-          req: string,
-          cb: (err?: Error | null, result?: string) => void
-        ) => {
-          if (req === "laplogos_core") {
+        const externalFn = externals as ExternalsFunction;
+        config.externals = (data: ExternalsData, cb: ExternalsCallback) => {
+          if (data.request === "laplogos_core") {
             return cb(null, "commonjs laplogos_core");
           }
-          return externals(ctx, req, cb);
+          return externalFn(data, cb);
         };
       }
     }

@@ -1,26 +1,11 @@
 import { readFile } from "fs/promises";
 import { resolve } from "path";
 import { LaplogosApp } from "../components/LaplogosApp";
+import { getPageSchema } from "./laplogos-schema";
 
 export const runtime = "nodejs";
 
-const initialPage = {
-  v: 1,
-  root: {
-    i: "root",
-    t: "Box",
-    p: { pad: 10 },
-    c: [
-      { i: "t1", t: "Txt", p: { val: "Hello laplogos" } },
-      {
-        i: "btn1",
-        t: "Btn",
-        p: { label: "Set demo count" },
-        on: { click: [{ t: "set", d: { key: "count", val: "demo" } }] },
-      },
-    ],
-  },
-};
+const initialPage = getPageSchema("/");
 
 const initialState = {};
 
@@ -28,7 +13,7 @@ async function initLaplogosWasm(mod: typeof import("laplogos_core")) {
   if (typeof mod.initSync === "function") {
     const wasmPath = resolve(process.cwd(), "../laplogos_core/pkg/laplogos_core_bg.wasm");
     const wasmBytes = await readFile(wasmPath);
-    mod.initSync(wasmBytes);
+    mod.initSync({ module: wasmBytes });
     return;
   }
   if (typeof mod.default === "function") {
