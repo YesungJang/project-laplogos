@@ -2,10 +2,11 @@ import { readFile } from "fs/promises";
 import { resolve } from "path";
 import { LaplogosApp } from "../components/LaplogosApp";
 import { getPageSchema } from "./laplogos-schema";
+import { normalizePagePath } from "../lib/laplogos-path";
 
 export const runtime = "nodejs";
 
-const initialPage = getPageSchema("/");
+const initialPage = getPageSchema(normalizePagePath("/"));
 
 const initialState = {};
 
@@ -32,12 +33,13 @@ async function renderLaplogosHtml(page: unknown, state: unknown) {
   }
 }
 
+function escapeJsonForScript(payload: unknown) {
+  return JSON.stringify(payload).replace(/</g, "\\u003c");
+}
+
 export default async function Home() {
   const renderedHtml = await renderLaplogosHtml(initialPage, initialState);
-  const bootstrapJson = JSON.stringify({ page: initialPage, state: initialState }).replace(
-    /</g,
-    "\\u003c"
-  );
+  const bootstrapJson = escapeJsonForScript({ page: initialPage, state: initialState });
   const initialJson = JSON.stringify(initialPage);
 
   return (
