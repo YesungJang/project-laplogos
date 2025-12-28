@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { normalizePagePath } from "../lib/laplogos-path";
 
 type EngineModule = typeof import("laplogos_core");
 type Engine = InstanceType<EngineModule["LaplogosEngine"]> & {
@@ -28,7 +29,8 @@ function isExternalUrl(to: string) {
 
 async function fetchPageJson(pathname: string, fallbackJson: string) {
   try {
-    const res = await fetch(`/api/laplogos?page=${encodeURIComponent(pathname)}`, {
+    const pagePath = normalizePagePath(pathname);
+    const res = await fetch(`/api/laplogos?page=${encodeURIComponent(pagePath)}`, {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) return fallbackJson;

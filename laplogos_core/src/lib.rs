@@ -402,6 +402,13 @@ pub fn render_laplogos(json_str: &str, container_id: &str) -> Result<(), JsValue
     let raw: Value =
         serde_json::from_str(json_str).map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
     let page = normalize_page(raw).map_err(|e| JsValue::from_str(&e.message))?;
+    let state = LaplogosState::default();
+    let mut warnings = Vec::new();
+    let materialized =
+        materialize_one_root(&page.root, &state, &mut warnings).map_err(|e| JsValue::from_str(&e.message))?;
+    for warn in warnings {
+        web_sys::console::warn_1(&JsValue::from_str(&warn));
+    }
 
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
     let document = window
@@ -413,7 +420,7 @@ pub fn render_laplogos(json_str: &str, container_id: &str) -> Result<(), JsValue
 
     container.set_inner_html("");
 
-    let root_el = renderer::render_node(&document, &page.root, None)?;
+    let root_el = renderer::render_node(&document, &materialized, None)?;
     container.append_child(&root_el)?;
 
     Ok(())
