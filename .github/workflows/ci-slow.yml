@@ -1,0 +1,31 @@
+name: ci-slow
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - name: Build wasm package
+        run: wasm-pack build --target web --out-dir pkg
+        working-directory: laplogos_core
+      - name: Install web deps
+        run: npm ci
+        working-directory: laplogos_web
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        working-directory: laplogos_web
+      - name: Run e2e tests
+        run: npm run test:e2e
+        working-directory: laplogos_web
