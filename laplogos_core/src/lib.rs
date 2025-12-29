@@ -132,7 +132,6 @@ impl LaplogosEngine {
         let page = normalize_page(raw).map_err(|e| JsValue::from_str(&e.message))?;
         let mut inner = self.inner.borrow_mut();
         inner.normalized_page = page;
-        inner.last_materialized = None;
         Ok(())
     }
 
@@ -142,12 +141,11 @@ impl LaplogosEngine {
         let state = parse_state(raw)?;
         let mut inner = self.inner.borrow_mut();
         inner.state = state;
-        inner.last_materialized = None;
         Ok(())
     }
 
     pub fn rerender(&self, container_id: &str) -> Result<(), JsValue> {
-        renderer::update_dom(self, container_id)
+        self.update_view(container_id)
     }
 
     pub fn hydrate(&self, container_id: &str) -> Result<(), JsValue> {

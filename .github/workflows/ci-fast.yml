@@ -1,0 +1,15 @@
+name: ci-fast
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run core tests
+        run: cargo test --manifest-path laplogos_core/Cargo.toml

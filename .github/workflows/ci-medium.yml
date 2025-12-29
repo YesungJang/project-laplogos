@@ -1,0 +1,26 @@
+name: ci-medium
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - name: Build wasm package
+        run: wasm-pack build --target web --out-dir pkg
+        working-directory: laplogos_core
+      - name: Install web deps
+        run: npm ci
+        working-directory: laplogos_web
+      - name: Run node tests
+        run: npm run test:node
+        working-directory: laplogos_web

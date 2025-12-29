@@ -24,6 +24,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+/laplogos_web/playwright-report/
+/laplogos_web/test-results/
 
 # --- Project laplogos Specific ---
 *.laplogos.json

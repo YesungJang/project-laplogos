@@ -370,50 +370,50 @@ Diff 対象は必ず **Materialized Tree**。
 
 ### Task 9.1: Packed Schema（Def/Ref + Style Dict）定義
 
- - [x] **Target:** `laplagos_core/src/lib.rs`（Schema 拡張） or `laplagos_core/src/schema_packed.rs`（新規）
- - [x] **Spec:**
-  - `LaplagosPage`（または PackedPage）に以下を追加（存在すれば packed とみなす）
-    - `defs: HashMap<String, LaplagosNode>`（定義ノード。`i` は持たない前提）
-    - `styles: HashMap<String, HashMap<String, String>>`（共通スタイル辞書。値は必ず String）
-  - `LaplagosNode` に以下を optional で追加（packed 表現用）
-    - `r: Option<String>`（Ref: defs 参照 ID）
-    - `st: Option<String>`（Style 参照 ID）
-    - `o: Option<HashMap<String, serde_json::Value>>`（override。`p` の上書き専用）
-  - **Validation（Fatal）**
-    - `r` が defs に無い / `st` が styles に無い → Fatal
-    - `o` が `p` 以外（children 等）を上書きしようとする → Fatal
-    - `styles[*]` の value が String 以外 → Fatal
+- [x] **Target:** `laplagos_core/src/lib.rs`（Schema 拡張） or `laplagos_core/src/schema_packed.rs`（新規）
+- [x] **Spec:**
+- `LaplagosPage`（または PackedPage）に以下を追加（存在すれば packed とみなす）
+  - `defs: HashMap<String, LaplagosNode>`（定義ノード。`i` は持たない前提）
+  - `styles: HashMap<String, HashMap<String, String>>`（共通スタイル辞書。値は必ず String）
+- `LaplagosNode` に以下を optional で追加（packed 表現用）
+  - `r: Option<String>`（Ref: defs 参照 ID）
+  - `st: Option<String>`（Style 参照 ID）
+  - `o: Option<HashMap<String, serde_json::Value>>`（override。`p` の上書き専用）
+- **Validation（Fatal）**
+  - `r` が defs に無い / `st` が styles に無い → Fatal
+  - `o` が `p` 以外（children 等）を上書きしようとする → Fatal
+  - `styles[*]` の value が String 以外 → Fatal
 
 ### Task 9.2: Normalize 実装（Packed → 正規 Schema v1）
 
- - [x] **Target:** `laplagos_core/src/normalize.rs`（新規）
- - [x] **Spec:**
-  - `fn normalize_page(input: serde_json::Value) -> Result<LaplagosPage, LaplagosError>`
-  - 入力が通常 v1 ならそのままパース。packed なら以下を実施:
-    1. `r` を deep clone で展開（参照側ノードの `i` を必須扱い）
-    2. `o` があれば `p` に **上書きマージ**（`p` 以外は上書き禁止）
-    3. `st` があれば `styles[st]` を `p` に **不足分のみマージ**（既存 `p` を優先）
-    4. 生成結果から `defs/styles/r/st/o` を全て除去し、**正規 v1 のみ**にする
-  - **Note:** Global ID Constraint や Loop 制約など “既存の Schema ルール” は緩和しない（Normalize は展開だけ）。
+- [x] **Target:** `laplagos_core/src/normalize.rs`（新規）
+- [x] **Spec:**
+- `fn normalize_page(input: serde_json::Value) -> Result<LaplagosPage, LaplagosError>`
+- 入力が通常 v1 ならそのままパース。packed なら以下を実施:
+  1. `r` を deep clone で展開（参照側ノードの `i` を必須扱い）
+  2. `o` があれば `p` に **上書きマージ**（`p` 以外は上書き禁止）
+  3. `st` があれば `styles[st]` を `p` に **不足分のみマージ**（既存 `p` を優先）
+  4. 生成結果から `defs/styles/r/st/o` を全て除去し、**正規 v1 のみ**にする
+- **Note:** Global ID Constraint や Loop 制約など “既存の Schema ルール” は緩和しない（Normalize は展開だけ）。
 
 ### Task 9.3: Normalize Conformance テスト追加
 
- - [x] **Target:** `tests/conformance.rs` + `tests/data/`
- - [x] **Spec:**
-  - `valid_packed_*.json` / `invalid_packed_*.json` を追加
-  - invalid 例:
-    - 未定義 `r` / 未定義 `st`
-    - `o` が `p` 以外を書き換え
-    - `styles` の値が String 以外
-  - 期待挙動: Fatal で落ちる（ただし panic しない / ログが残る）
+- [x] **Target:** `tests/conformance.rs` + `tests/data/`
+- [x] **Spec:**
+- `valid_packed_*.json` / `invalid_packed_*.json` を追加
+- invalid 例:
+  - 未定義 `r` / 未定義 `st`
+  - `o` が `p` 以外を書き換え
+  - `styles` の値が String 以外
+- 期待挙動: Fatal で落ちる（ただし panic しない / ログが残る）
 
 ### Task 9.4: Engine Loop 先頭に Normalize を挿入（重要）
 
- - [x] **Target:** `laplagos_core/src/lib.rs`
- - [x] **Spec:**
-  - **Task 6.x（Materialize→Diff→Patch→DOM）のフローの先頭**に `normalize_page` を追加する
-  - Engine が保持するページは `normalized_page: LaplagosPage` に統一
-  - `set_page(...)` / 初期化入口で Normalize → 以降は normalized_page のみを参照
+- [x] **Target:** `laplagos_core/src/lib.rs`
+- [x] **Spec:**
+- **Task 6.x（Materialize→Diff→Patch→DOM）のフローの先頭**に `normalize_page` を追加する
+- Engine が保持するページは `normalized_page: LaplagosPage` に統一
+- `set_page(...)` / 初期化入口で Normalize → 以降は normalized_page のみを参照
 
 ---
 
@@ -471,35 +471,35 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 ### Task 11.1: SSR 向け `render_to_string` API（Core）
 
- - [x] **Target:** `laplagos_core/src/lib.rs`
- - [x] **Spec:**
-  - `render_laplagos_to_string(page_json: JsValue, state_json: JsValue) -> Result<String, JsValue>`
-  - 内部フロー（純関数）:
-    1. Normalize（Phase 9）
-    2. Materialize（Task 5.5 がある前提）
-    3. HTML 文字列化（サーバ用レンダラー）
+- [x] **Target:** `laplagos_core/src/lib.rs`
+- [x] **Spec:**
+- `render_laplagos_to_string(page_json: JsValue, state_json: JsValue) -> Result<String, JsValue>`
+- 内部フロー（純関数）:
+  1. Normalize（Phase 9）
+  2. Materialize（Task 5.5 がある前提）
+  3. HTML 文字列化（サーバ用レンダラー）
 
 ### Task 11.2: Next.js SSR 組み込み + JSON 埋め込み（XSS 対策を明記）
 
- - [x] **Target:** `laplagos_web`（SSR 実装箇所）
- - [x] **Spec:**
-  - サーバで `render_laplagos_to_string` を呼び HTML 出力
-  - 初期データ（page/state）を `<script type="application/json">` に埋め込む
-  - **XSS 対策（必須）**
-    - `JSON.stringify(data)` の結果に含まれる `<` を `\\u003c` に置換して埋め込む
-    - （例）`safe = json.replace(/</g, "\\u003c")`
+- [x] **Target:** `laplagos_web`（SSR 実装箇所）
+- [x] **Spec:**
+- サーバで `render_laplagos_to_string` を呼び HTML 出力
+- 初期データ（page/state）を `<script type="application/json">` に埋め込む
+- **XSS 対策（必須）**
+  - `JSON.stringify(data)` の結果に含まれる `<` を `\\u003c` に置換して埋め込む
+  - （例）`safe = json.replace(/</g, "\\u003c")`
 
 ### Task 11.3: Hydration（イベントのみ接続）+ 不一致時フォールバック
 
- - [x] **Target:** `laplagos_core/src/renderer.rs` + `laplagos_web`
- - [x] **Spec:**
-  - クライアント起動時:
-    1. bootstrap JSON を読む
-    2. Normalize → Materialize して `materialized_tree` を作る
-    3. **Hydration 専用 `bind_events(materialized_tree)`** を実行（DOM は作らない）
-       - `data-laplagos-id` で DOM を特定してイベントを貼る
-       - DOM が見つからない / 失敗 → Error Log 記録 → **root replace でフル再描画**
-    4. 成功時: `last_materialized = materialized_tree` として通常ループへ
+- [x] **Target:** `laplagos_core/src/renderer.rs` + `laplagos_web`
+- [x] **Spec:**
+- クライアント起動時:
+  1. bootstrap JSON を読む
+  2. Normalize → Materialize して `materialized_tree` を作る
+  3. **Hydration 専用 `bind_events(materialized_tree)`** を実行（DOM は作らない）
+     - `data-laplagos-id` で DOM を特定してイベントを貼る
+     - DOM が見つからない / 失敗 → Error Log 記録 → **root replace でフル再描画**
+  4. 成功時: `last_materialized = materialized_tree` として通常ループへ
 
 ### Task 11.4: Hydration 不安定要因の吸収（最小）
 
@@ -510,14 +510,150 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 ---
 
+## Phase 12: Testing Strategy & Harness (Web-First)
+
+**Goal:** Web 版（SSR/CSR/Diff/Patch/Router）が今後の変更で壊れないよう、**高速で再現性の高いテスト基盤**を先に確立する。
+**Strategy:** テストは 3 レイヤに分離し、**9 割は純 Rust/Node 寄せ**、DOM が絡む領域だけを **ブラウザ（E2E or wasm-bindgen-test）**で薄く担保する。
+
+### Layering Policy (重要)
+
+1. **Layer 1: Core Unit Tests (Pure Rust / Fast)**
+
+   - 対象: `laplogos_core` の **DOM 非依存**ロジック
+   - 目的: 回帰の大半をここで潰す（最重要・最頻）
+
+2. **Layer 2: SSR Integration Tests (Node / Medium)**
+
+   - 対象: SSR で使う実経路（`render_laplogos_to_string` など）
+   - 目的: “本番呼び出し” の整合性保証（少数のゴールデンケース）
+
+3. **Layer 3: Browser Behavior Tests (E2E / Slow)**
+
+   - 対象: DOM 適用・フォーカス維持・Hydration 失敗フォールバック等、ブラウザ実挙動が必要な領域
+   - 目的: 最小ケースで「壊れると致命的」だけを押さえる（増やさない）
+
+---
+
+### Task 12.1: Core Unit Test Harness (Pure Rust)
+
+- [x] **Target:** `laplogos_core/tests/`
+
+- [x] **Spec:**
+
+  - `normalize` / `schema validation` / `materialize` / `diff` のテストを**純 Rust で実行**できる構成に統一する
+  - `apply_patch` や `web_sys` 依存は **Layer 1 には入れない**
+
+- [x] **Deliverables:**
+
+  - `tests/materialize.rs`
+  - `tests/diff.rs`
+  - `tests/normalize.rs`
+  - `tests/schema_validation.rs`
+
+---
+
+### Task 12.2: Golden Snapshot Tests (Materialize Output)
+
+- [x] **Target:** `laplogos_core/tests/snapshot_materialize.rs`
+- [x] **Spec:**
+
+  - 入力: `schema(JSON pre-normalize)` + `state`
+  - 期待: `normalize -> materialize` の結果（**Materialized View Tree**）が常に同一
+  - **Case must include:** `if`, `for (primitive)`, `Ref/Def`, `resolve_text("$key")`
+  - Snapshot 形式は **JSON** または **安定化した文字列表現**（順序・空白が固定される形）で保存する
+
+---
+
+### Task 12.3: Patch Invariants Tests (Diff Output Sanity)
+
+- [x] **Target:** `laplogos_core/tests/patch_invariants.rs`
+- [x] **Spec:** `diff(old_tree, new_tree)` の出力 `Vec<Patch>` に対し、不変条件を検証する
+
+  - `Patch` の `id` / `parent_id` は必ず **Global ID Constraint** を満たす
+  - `ReorderChildren.ordered_ids` は **重複なし**かつ **同一親配下の既存子集合**である
+  - `Append/Remove/Replace` の適用順序に依存して壊れないよう、出力のルールを固定（最低限の順序規約を明文化）
+
+- [x] **Note:** 完全な DOM 適用はここではしない（Layer 1 に留める）
+
+---
+
+### Task 12.4: SSR Integration Tests (Node)
+
+- [x] **Target:** `laplogos_web/tests/ssr_integration.test.ts`（または同等の Node 実行テスト）
+
+- [x] **Spec:**
+
+  - SSR 本番と同じ経路で `render_laplogos_to_string` を呼び出し、HTML を取得
+  - **Inputs:** `page`（URL パス）・初期 schema・初期 state
+  - **Assertions:**
+
+    - SSR HTML に `data-laplogos-id` が付与されている
+    - SSR が埋め込む JSON は **`<` が `\u003c` にエスケープ**されている（XSS 対策）
+    - `?page=` の page 文字列は **URL パスそのまま**が入力になっている（SSR/CSR 一致）
+
+- [x] **Case Count:** まずは **1〜2 ケース**で十分（増やし過ぎない）
+
+---
+
+### Task 12.5: CSR Bootstrap Consistency Tests (Node)
+
+- [x] **Target:** `laplogos_web/tests/csr_bootstrap_consistency.test.ts`
+- [x] **Spec:**
+
+  - SSR が埋め込む `bootstrap(schema/state)` を取り出し
+  - CSR 側と同じ入力で `normalize -> materialize` した結果が、期待するツリーに一致する
+  - 目的は **SSR/CSR の入力一致** と **正規化前埋め込み統一**を固定すること
+
+---
+
+### Task 12.6: Browser E2E Tests (Minimum Set)
+
+**方針:** ここは増やさない。致命箇所だけをゴールデンケースで押さえる。
+（推奨: Playwright。wasm-bindgen-test でも可だが、SSR/Router 含めた一気通貫は E2E が楽。）
+
+- [x] **Target:** `laplogos_web/e2e/`
+
+- [x] **Cases (must-have 3):**
+
+  1. **Focus Guard:** `Inp` 入力中に state 更新が走っても、フォーカスと入力値が壊れない
+  2. **ReorderChildren:** ループ表示の並び替えで DOM node instance が維持され、入力が飛ばない
+  3. **Hydration Failure Fallback:** Hydration 失敗時に root 置換へフォールバックし、白画面にならない
+
+- [x] **Assertions:**
+
+  - Input の `value` が意図せず巻き戻らない
+  - `document.activeElement` が維持される
+  - Hydration 失敗時でも画面が表示され、エラー表示 or フル再描画が動く
+
+---
+
+### Task 12.7: CI Test Split (Fast/Medium/Slow)
+
+- [x] **Target:** CI 設定（GitHub Actions 等）
+- [x] **Spec:**
+
+  - **Fast:** Layer 1（純 Rust テスト）を PR ごとに必ず実行
+  - **Medium:** Layer 2（SSR/CSR Node テスト）を PR ごとに実行
+  - **Slow:** Layer 3（E2E）は PR では任意（または main マージ時/夜間）にして、開発速度を落とさない
+
+---
+
+## Notes (Implementation Constraints)
+
+- Layer 1 のテスト対象は **必ず DOM 非依存**に保つ（`web_sys` を混ぜない）
+- `materialize` の結果は Diff/Render の基礎なので、Snapshot は **最重要資産**として扱う
+- E2E は “増やさない” をルール化し、壊れると致命的な箇所だけを維持する
+
+---
+
 ## 📱 Stage 3: Multi-Platform (Native)
 
-- Phase 12: iOS Runtime（SwiftUI）
-- Phase 13: Android Runtime（Jetpack Compose）
+- Phase 13: iOS Runtime（SwiftUI）
+- Phase 14: Android Runtime（Jetpack Compose）
 
 ---
 
 ## 🤖 Stage 4: AI-Native Evolution
 
-- Phase 14: Streaming UI
-- Phase 15: Self-Healing / A/B Testing
+- Phase 15: Streaming UI
+- Phase 16: Self-Healing / A/B Testing
