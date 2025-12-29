@@ -11,14 +11,16 @@ const initialPage = getPageSchema(normalizePagePath("/"));
 const initialState = {};
 
 async function initLaplogosWasm(mod: typeof import("laplogos_core")) {
+  const wasmPath =
+    process.env.LAPLOGOS_WASM_PATH ??
+    resolve(process.cwd(), "public/wasm/laplogos_core_bg.wasm");
+  const wasmBytes = await readFile(wasmPath);
   if (typeof mod.initSync === "function") {
-    const wasmPath = resolve(process.cwd(), "../laplogos_core/pkg/laplogos_core_bg.wasm");
-    const wasmBytes = await readFile(wasmPath);
     mod.initSync({ module: wasmBytes });
     return;
   }
   if (typeof mod.default === "function") {
-    await mod.default();
+    await mod.default(wasmBytes);
   }
 }
 

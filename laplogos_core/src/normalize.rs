@@ -5,8 +5,13 @@ use std::collections::HashMap;
 use crate::materialize::LaplogosError;
 use crate::{LaplogosNode, LaplogosPage};
 
+fn default_schema_version() -> u8 {
+    1
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct PackedPage {
+    #[serde(default = "default_schema_version")]
     pub v: u8,
     pub root: PackedNode,
     #[serde(default)]

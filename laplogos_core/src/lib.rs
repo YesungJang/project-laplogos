@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use js_sys::{Function, JSON};
+use js_sys::{Date, Function, JSON};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
@@ -20,8 +20,19 @@ pub use store::LaplogosState;
 use store::{apply_action, normalize_action, validate_action, LaplogosConfig, ValidatedAction};
 use crate::materialize::{materialize_one_root, LaplogosError};
 
+const SCHEMA_VERSION_DEFAULT: u8 = 1;
+const MAX_ACTION_LOG_COUNT: usize = 200;
+const MAX_ACTION_LOG_BYTES: usize = 64 * 1024;
+const MAX_ERROR_LOG_COUNT: usize = 200;
+const MAX_ERROR_LOG_BYTES: usize = 64 * 1024;
+const MAX_PATCHES_PER_DISPATCH: usize = 2000;
+const MAX_DISPATCH_PER_SEC: usize = 30;
+const FETCH_TIMEOUT_MS: i32 = 10_000;
+const FETCH_MAX_JSON_BYTES: usize = 1024 * 1024;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LaplogosPage {
+    #[serde(default = "default_schema_version")]
     pub v: u8,
     pub root: LaplogosNode,
     #[serde(rename = "defs", default, skip_serializing_if = "Option::is_none")]
@@ -61,11 +72,60 @@ pub struct LaplogosEngine {
 
 struct LaplogosEngineInner {
     state: LaplogosState,
+    input_page: Option<Value>,
     normalized_page: LaplogosPage,
-    logs: Vec<String>,
+    action_log: LogBuffer,
+    error_log: LogBuffer,
     last_materialized: Option<LaplogosNode>,
     config: Option<LaplogosConfig>,
     on_nav: Option<Function>,
+    metrics: EngineMetrics,
+    dispatch_times: VecDeque<f64>,
+}
+
+#[derive(Debug, Default)]
+struct LogBuffer {
+    entries: VecDeque<String>,
+    total_bytes: usize,
+    max_entries: usize,
+    max_bytes: usize,
+}
+
+impl LogBuffer {
+    fn new(max_entries: usize, max_bytes: usize) -> Self {
+        Self {
+            entries: VecDeque::new(),
+            total_bytes: 0,
+            max_entries,
+            max_bytes,
+        }
+    }
+
+    fn push(&mut self, entry: String) {
+        self.total_bytes += entry.len();
+        self.entries.push_back(entry);
+        while self.entries.len() > self.max_entries || self.total_bytes > self.max_bytes {
+            if let Some(removed) = self.entries.pop_front() {
+                self.total_bytes = self.total_bytes.saturating_sub(removed.len());
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn to_json_string(&self) -> String {
+        let entries: Vec<&String> = self.entries.iter().collect();
+        serde_json::to_string(&entries).unwrap_or_else(|_| "[]".to_string())
+    }
+}
+
+#[derive(Debug, Default, Serialize)]
+struct EngineMetrics {
+    normalize_ms: Option<f64>,
+    materialize_ms: Option<f64>,
+    diff_ms: Option<f64>,
+    patch_ms: Option<f64>,
+    hydrate_ms: Option<f64>,
 }
 
 impl Clone for LaplogosEngine {
@@ -82,23 +142,74 @@ impl LaplogosEngine {
     pub fn new(initial_json: &str) -> Result<LaplogosEngine, JsValue> {
         let raw: Value = serde_json::from_str(initial_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
-        let page = normalize_page(raw).map_err(|e| JsValue::from_str(&e.message))?;
+        let (schema_v, v_missing) = extract_schema_version(&raw)
+            .map_err(|e| JsValue::from_str(&e.message))?;
+        if let Err(err) = ensure_supported_schema_version(schema_v) {
+            self.log_error(&err);
+            return Err(JsValue::from_str(&err.message));
+        }
 
-        Ok(LaplogosEngine {
+        let normalize_start = Date::now();
+        let raw_clone = raw.clone();
+        let page = normalize_page(raw).map_err(|e| JsValue::from_str(&e.message))?;
+        let normalize_ms = Date::now() - normalize_start;
+
+        let engine = LaplogosEngine {
             inner: Rc::new(RefCell::new(LaplogosEngineInner {
                 state: LaplogosState::default(),
+                input_page: Some(raw_clone),
                 normalized_page: page,
-                logs: Vec::new(),
+                action_log: LogBuffer::new(MAX_ACTION_LOG_COUNT, MAX_ACTION_LOG_BYTES),
+                error_log: LogBuffer::new(MAX_ERROR_LOG_COUNT, MAX_ERROR_LOG_BYTES),
                 last_materialized: None,
-                config: None,
+                config: Some(LaplogosConfig::default()),
                 on_nav: None,
+                metrics: EngineMetrics {
+                    normalize_ms: Some(normalize_ms),
+                    ..EngineMetrics::default()
+                },
+                dispatch_times: VecDeque::new(),
             })),
-        })
+        };
+
+        if v_missing {
+            engine.log_warn("schema v is missing; defaulting to v1");
+        }
+
+        Ok(engine)
     }
 
     pub fn get_state_json(&self) -> String {
         let inner = self.inner.borrow();
         serde_json::to_string(&inner.state.data).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    pub fn get_action_log_json(&self) -> String {
+        let inner = self.inner.borrow();
+        inner.action_log.to_json_string()
+    }
+
+    pub fn get_error_log_json(&self) -> String {
+        let inner = self.inner.borrow();
+        inner.error_log.to_json_string()
+    }
+
+    pub fn get_page_json(&self) -> String {
+        let inner = self.inner.borrow();
+        serde_json::to_string(&inner.normalized_page).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    pub fn get_input_page_json(&self) -> String {
+        let inner = self.inner.borrow();
+        match inner.input_page.as_ref() {
+            Some(value) => serde_json::to_string(value).unwrap_or_else(|_| "{}".to_string()),
+            None => "{}".to_string(),
+        }
+    }
+
+    pub fn get_metrics_json(&self) -> String {
+        let inner = self.inner.borrow();
+        serde_json::to_string(&inner.metrics).unwrap_or_else(|_| "{}".to_string())
     }
 
     pub fn init(&self, config_json: &str) -> Result<(), JsValue> {
@@ -129,10 +240,27 @@ impl LaplogosEngine {
     pub fn set_page_json(&self, page_json: &str) -> Result<(), JsValue> {
         let raw: Value = serde_json::from_str(page_json)
             .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
+        let (schema_v, v_missing) = extract_schema_version(&raw)
+            .map_err(|e| JsValue::from_str(&e.message))?;
+        ensure_supported_schema_version(schema_v)
+            .map_err(|e| JsValue::from_str(&e.message))?;
+
+        let normalize_start = Date::now();
+        let raw_clone = raw.clone();
         let page = normalize_page(raw).map_err(|e| JsValue::from_str(&e.message))?;
+        let normalize_ms = Date::now() - normalize_start;
+
         let mut inner = self.inner.borrow_mut();
+        inner.input_page = Some(raw_clone);
         inner.normalized_page = page;
         inner.last_materialized = None;
+        inner.metrics.normalize_ms = Some(normalize_ms);
+
+        if v_missing {
+            drop(inner);
+            self.log_warn("schema v is missing; defaulting to v1");
+        }
+
         Ok(())
     }
 
@@ -147,10 +275,11 @@ impl LaplogosEngine {
     }
 
     pub fn rerender(&self, container_id: &str) -> Result<(), JsValue> {
-        renderer::update_dom(self, container_id)
+        self.update_view(container_id)
     }
 
     pub fn hydrate(&self, container_id: &str) -> Result<(), JsValue> {
+        let hydrate_start = Date::now();
         let (materialized, warnings) = self.materialize_current()?;
         for warn in warnings {
             self.log_warn(&warn);
@@ -159,12 +288,16 @@ impl LaplogosEngine {
         match renderer::bind_events(self, &materialized) {
             Ok(()) => {
                 self.inner.borrow_mut().last_materialized = Some(materialized);
+                let hydrate_ms = Date::now() - hydrate_start;
+                self.inner.borrow_mut().metrics.hydrate_ms = Some(hydrate_ms);
                 Ok(())
             }
             Err(err) => {
                 self.log_warn(&format!("Hydration failed: {:?}", err));
                 renderer::update_dom_with_root(container_id, &materialized, Some(self))?;
                 self.inner.borrow_mut().last_materialized = Some(materialized);
+                let hydrate_ms = Date::now() - hydrate_start;
+                self.inner.borrow_mut().metrics.hydrate_ms = Some(hydrate_ms);
                 Ok(())
             }
         }
@@ -174,7 +307,8 @@ impl LaplogosEngine {
 impl LaplogosEngine {
     pub(crate) fn log_warn(&self, message: &str) {
         web_sys::console::warn_1(&JsValue::from_str(message));
-        self.inner.borrow_mut().logs.push(message.to_string());
+        let mut inner = self.inner.borrow_mut();
+        inner.error_log.push(format!("WARN: {}", message));
     }
 
     fn with_page<R>(&self, f: impl FnOnce(&LaplogosPage) -> R) -> R {
@@ -187,6 +321,11 @@ impl LaplogosEngine {
         action_json: &str,
         event_value: Option<String>,
     ) -> Result<(), JsValue> {
+        if !self.allow_dispatch() {
+            self.log_warn("dispatch rate limit exceeded");
+            return Ok(());
+        }
+
         let raw: Value = match serde_json::from_str(action_json) {
             Ok(value) => value,
             Err(e) => {
@@ -202,6 +341,8 @@ impl LaplogosEngine {
                 return Ok(());
             }
         };
+
+        self.log_action(&action);
 
         if !self.is_action_allowed(&action.t) {
             self.log_warn(&format!("Action not allowed: {}", action.t));
@@ -257,27 +398,50 @@ impl LaplogosEngine {
     }
 
     fn update_view(&self, container_id: &str) -> Result<(), JsValue> {
+        let materialize_start = Date::now();
         let (materialized, warnings) = self.materialize_current()?;
+        let materialize_ms = Date::now() - materialize_start;
+        self.inner.borrow_mut().metrics.materialize_ms = Some(materialize_ms);
         for warn in warnings {
             self.log_warn(&warn);
         }
 
         let previous = self.inner.borrow().last_materialized.clone();
         if let Some(old) = previous {
+            let diff_start = Date::now();
             let patches = diff::diff(&old, &materialized);
+            let diff_ms = Date::now() - diff_start;
+            self.inner.borrow_mut().metrics.diff_ms = Some(diff_ms);
+
+            if patches.len() > MAX_PATCHES_PER_DISPATCH {
+                let err = LaplogosError::new(format!(
+                    "patch limit exceeded: {} > {}",
+                    patches.len(),
+                    MAX_PATCHES_PER_DISPATCH
+                ));
+                self.log_error(&err);
+                return Err(JsValue::from_str(&err.message));
+            }
+
+            let patch_start = Date::now();
             if let Err(err) = renderer::apply_patches(self, container_id, &patches, &materialized) {
                 self.log_warn(&format!("Patch apply failed: {:?}", err));
                 renderer::update_dom_with_root(container_id, &materialized, Some(self))?;
             }
+            let patch_ms = Date::now() - patch_start;
+            self.inner.borrow_mut().metrics.patch_ms = Some(patch_ms);
         } else {
+            let patch_start = Date::now();
             renderer::update_dom_with_root(container_id, &materialized, Some(self))?;
+            let patch_ms = Date::now() - patch_start;
+            self.inner.borrow_mut().metrics.patch_ms = Some(patch_ms);
         }
 
         self.inner.borrow_mut().last_materialized = Some(materialized);
         Ok(())
     }
 
-    fn materialize_current(&self) -> Result<(LaplogosNode, Vec<String>), JsValue> {
+    pub(crate) fn materialize_current(&self) -> Result<(LaplogosNode, Vec<String>), JsValue> {
         let mut warnings = Vec::new();
         let materialized = {
             let inner = self.inner.borrow();
@@ -294,7 +458,31 @@ impl LaplogosEngine {
 
     fn log_error(&self, err: &LaplogosError) {
         web_sys::console::error_1(&JsValue::from_str(&err.message));
-        self.inner.borrow_mut().logs.push(err.message.clone());
+        let mut inner = self.inner.borrow_mut();
+        inner.error_log.push(format!("ERROR: {}", err.message));
+    }
+
+    fn log_action(&self, action: &store::ActionSpec) {
+        let text = serde_json::to_string(action).unwrap_or_else(|_| action.t.clone());
+        let mut inner = self.inner.borrow_mut();
+        inner.action_log.push(text);
+    }
+
+    fn allow_dispatch(&self) -> bool {
+        let now = Date::now();
+        let mut inner = self.inner.borrow_mut();
+        let window_start = now - 1000.0;
+        while let Some(oldest) = inner.dispatch_times.front() {
+            if *oldest >= window_start {
+                break;
+            }
+            inner.dispatch_times.pop_front();
+        }
+        if inner.dispatch_times.len() >= MAX_DISPATCH_PER_SEC {
+            return false;
+        }
+        inner.dispatch_times.push_back(now);
+        true
     }
 
     fn spawn_fetch(&self, url: String, on_success: Vec<Value>, on_fail: Vec<Value>) {
@@ -304,6 +492,7 @@ impl LaplogosEngine {
                 Ok(url) => url,
                 Err(_) => {
                     engine.log_warn("fetch.url is invalid");
+                    engine.dispatch_actions(on_fail);
                     return;
                 }
             };
@@ -311,6 +500,7 @@ impl LaplogosEngine {
             let host = parsed.host().to_lowercase();
             if host.is_empty() || !engine.is_host_allowed(&host) {
                 engine.log_warn("fetch host is not allowed");
+                engine.dispatch_actions(on_fail);
                 return;
             }
 
@@ -318,24 +508,124 @@ impl LaplogosEngine {
                 Some(window) => window,
                 None => {
                     engine.log_warn("No window for fetch");
+                    engine.dispatch_actions(on_fail);
                     return;
                 }
             };
 
-            let resp_value = JsFuture::from(window.fetch_with_str(&url)).await;
-            let ok = match resp_value {
-                Ok(val) => val
-                    .dyn_into::<web_sys::Response>()
-                    .map(|resp| resp.ok())
-                    .unwrap_or(false),
-                Err(_) => false,
+            let controller = web_sys::AbortController::new().ok();
+            let mut opts = web_sys::RequestInit::new();
+            opts.method("GET");
+            opts.credentials(web_sys::RequestCredentials::Omit);
+            if let Some(controller) = controller.as_ref() {
+                opts.signal(Some(&controller.signal()));
+            }
+
+            let timeout_handle = if let Some(controller) = controller.as_ref() {
+                let controller = controller.clone();
+                let closure = Closure::wrap(Box::new(move || {
+                    controller.abort();
+                }) as Box<dyn FnMut()>);
+                let handle = window
+                    .set_timeout_with_callback_and_timeout_and_arguments_0(
+                        closure.as_ref().unchecked_ref(),
+                        FETCH_TIMEOUT_MS,
+                    )
+                    .ok();
+                closure.forget();
+                handle
+            } else {
+                None
             };
 
-            if ok {
-                engine.dispatch_actions(on_success);
-            } else {
-                engine.dispatch_actions(on_fail);
+            let resp_value = JsFuture::from(window.fetch_with_str_and_init(&url, &opts)).await;
+            if let Some(handle) = timeout_handle {
+                window.clear_timeout_with_handle(handle);
             }
+
+            let response = match resp_value {
+                Ok(val) => match val.dyn_into::<web_sys::Response>() {
+                    Ok(resp) => resp,
+                    Err(_) => {
+                        engine.log_warn("fetch response is invalid");
+                        engine.dispatch_actions(on_fail);
+                        return;
+                    }
+                },
+                Err(_) => {
+                    engine.log_warn("fetch failed");
+                    engine.dispatch_actions(on_fail);
+                    return;
+                }
+            };
+
+            if !response.ok() {
+                engine.log_warn("fetch response is not ok");
+                engine.dispatch_actions(on_fail);
+                return;
+            }
+
+            let final_url = response.url();
+            if !final_url.is_empty() {
+                match web_sys::Url::new(&final_url) {
+                    Ok(final_parsed) => {
+                        let final_host = final_parsed.host().to_lowercase();
+                        if final_host.is_empty() || !engine.is_host_allowed(&final_host) {
+                            engine.log_warn("fetch final host is not allowed");
+                            engine.dispatch_actions(on_fail);
+                            return;
+                        }
+                    }
+                    Err(_) => {
+                        engine.log_warn("fetch final url is invalid");
+                        engine.dispatch_actions(on_fail);
+                        return;
+                    }
+                }
+            }
+
+            let content_type = response
+                .headers()
+                .get("content-type")
+                .ok()
+                .flatten()
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if !content_type.contains("application/json") {
+                engine.log_warn("fetch response must be application/json");
+                engine.dispatch_actions(on_fail);
+                return;
+            }
+
+            let text_promise = match response.text() {
+                Ok(promise) => promise,
+                Err(_) => {
+                    engine.log_warn("fetch response text failed");
+                    engine.dispatch_actions(on_fail);
+                    return;
+                }
+            };
+            let text_value = JsFuture::from(text_promise).await;
+            let text = match text_value {
+                Ok(val) => val.as_string().unwrap_or_default(),
+                Err(_) => {
+                    engine.log_warn("fetch response text failed");
+                    engine.dispatch_actions(on_fail);
+                    return;
+                }
+            };
+            if text.len() > FETCH_MAX_JSON_BYTES {
+                engine.log_warn("fetch response too large");
+                engine.dispatch_actions(on_fail);
+                return;
+            }
+            if JSON::parse(&text).is_err() {
+                engine.log_warn("fetch response is not valid JSON");
+                engine.dispatch_actions(on_fail);
+                return;
+            }
+
+            engine.dispatch_actions(on_success);
         });
     }
 
@@ -354,7 +644,7 @@ impl LaplogosEngine {
         let inner = self.inner.borrow();
         match inner.config.as_ref() {
             Some(config) => config.allows_action(action),
-            None => true,
+            None => false,
         }
     }
 
@@ -392,6 +682,40 @@ impl LaplogosEngine {
     }
 }
 
+fn default_schema_version() -> u8 {
+    SCHEMA_VERSION_DEFAULT
+}
+
+fn extract_schema_version(value: &Value) -> Result<(u8, bool), LaplogosError> {
+    let obj = value
+        .as_object()
+        .ok_or_else(|| LaplogosError::new("page must be an object"))?;
+    match obj.get("v") {
+        None => Ok((SCHEMA_VERSION_DEFAULT, true)),
+        Some(Value::Number(num)) => {
+            let v = num
+                .as_u64()
+                .ok_or_else(|| LaplogosError::new("schema v must be an integer"))?;
+            if v > u8::MAX as u64 {
+                return Err(LaplogosError::new("schema v is out of range"));
+            }
+            Ok((v as u8, false))
+        }
+        Some(_) => Err(LaplogosError::new("schema v must be a number")),
+    }
+}
+
+fn ensure_supported_schema_version(v: u8) -> Result<(), LaplogosError> {
+    if v == SCHEMA_VERSION_DEFAULT {
+        Ok(())
+    } else {
+        Err(LaplogosError::new(format!(
+            "unsupported schema v: {}",
+            v
+        )))
+    }
+}
+
 #[wasm_bindgen]
 pub fn init_panic_hook() {
     console_error_panic_hook::set_once();
@@ -401,6 +725,12 @@ pub fn init_panic_hook() {
 pub fn render_laplogos(json_str: &str, container_id: &str) -> Result<(), JsValue> {
     let raw: Value =
         serde_json::from_str(json_str).map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
+    let (schema_v, v_missing) =
+        extract_schema_version(&raw).map_err(|e| JsValue::from_str(&e.message))?;
+    ensure_supported_schema_version(schema_v).map_err(|e| JsValue::from_str(&e.message))?;
+    if v_missing {
+        web_sys::console::warn_1(&JsValue::from_str("schema v is missing; defaulting to v1"));
+    }
     let page = normalize_page(raw).map_err(|e| JsValue::from_str(&e.message))?;
     let state = LaplogosState::default();
     let mut warnings = Vec::new();
@@ -430,6 +760,10 @@ pub fn render_laplogos(json_str: &str, container_id: &str) -> Result<(), JsValue
 pub fn render_laplogos_to_string(page_json: JsValue, state_json: JsValue) -> Result<String, JsValue> {
     let page_value = js_value_to_json(page_json)?;
     let state_value = js_value_to_json(state_json)?;
+
+    let (schema_v, _v_missing) =
+        extract_schema_version(&page_value).map_err(|e| JsValue::from_str(&e.message))?;
+    ensure_supported_schema_version(schema_v).map_err(|e| JsValue::from_str(&e.message))?;
 
     let page = normalize_page(page_value).map_err(|e| JsValue::from_str(&e.message))?;
     let state = parse_state(state_value)?;

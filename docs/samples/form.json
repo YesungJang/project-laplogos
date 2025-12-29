@@ -1,0 +1,1 @@
+{"v":1,"root":{"i":"root","t":"Box","c":[{"i":"label","t":"Txt","p":{"val":"Name"}},{"i":"name","t":"Inp","p":{"val":"$name"}},{"i":"btn","t":"Btn","p":{"label":"Send"},"on":{"click":[{"t":"set","d":{"key":"status","val":"submitted"}}]}}]}}

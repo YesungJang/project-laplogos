@@ -3,10 +3,31 @@ use std::collections::HashSet;
 
 use crate::{store::LaplogosState, LaplogosNode};
 
+const MAX_NODES: usize = 5000;
+const MAX_LOOP_ITEMS: usize = 200;
+
 #[derive(Debug, Clone, Default)]
 pub struct MaterializeScope {
     pub item: Option<String>,
     pub key: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct MaterializeContext {
+    node_count: usize,
+}
+
+impl MaterializeContext {
+    fn bump(&mut self) -> Result<(), LaplogosError> {
+        self.node_count += 1;
+        if self.node_count > MAX_NODES {
+            return Err(LaplogosError::new(format!(
+                "max nodes exceeded: {} > {}",
+                self.node_count, MAX_NODES
+            )));
+        }
+        Ok(())
+    }
 }
 
 pub fn resolve_text(val: &Value, state: &LaplogosState, scope: &MaterializeScope) -> String {
@@ -87,11 +108,12 @@ pub fn validate_global_ids(node: &LaplogosNode) -> Result<(), String> {
     Ok(())
 }
 
-pub fn materialize_many(
+pub(crate) fn materialize_many(
     node: &LaplogosNode,
     state: &LaplogosState,
     scope: &MaterializeScope,
     warnings: &mut Vec<String>,
+    ctx: &mut MaterializeContext,
 ) -> Result<Vec<LaplogosNode>, LaplogosError> {
     if !is_valid_id(&node.i) {
         return Err(LaplogosError::new(format!("Invalid id: {}", node.i)));
@@ -112,6 +134,13 @@ pub fn materialize_many(
             Value::Array(items) => items,
             _ => return Err(LaplogosError::new("for must be an array")),
         };
+        if items.len() > MAX_LOOP_ITEMS {
+            return Err(LaplogosError::new(format!(
+                "loop item limit exceeded: {} > {}",
+                items.len(),
+                MAX_LOOP_ITEMS
+            )));
+        }
 
         let mut output = Vec::new();
         let mut seen = HashSet::new();
@@ -147,6 +176,8 @@ pub fn materialize_many(
             child_scope.item = Some(item_str.clone());
             child_scope.key = Some(idx.to_string());
 
+            ctx.bump()?;
+
             let mut node_copy = node.clone();
             node_copy.for_ = None;
             node_copy.if_ = None;
@@ -157,18 +188,19 @@ pub fn materialize_many(
             }
 
             apply_text(&mut node_copy, state, &child_scope);
-            materialize_children(&mut node_copy, state, &child_scope, warnings)?;
+            materialize_children(&mut node_copy, state, &child_scope, warnings, ctx)?;
             output.push(node_copy);
         }
 
         return Ok(output);
     }
 
+    ctx.bump()?;
     let mut node_copy = node.clone();
     node_copy.for_ = None;
     node_copy.if_ = None;
     apply_text(&mut node_copy, state, scope);
-    materialize_children(&mut node_copy, state, scope, warnings)?;
+    materialize_children(&mut node_copy, state, scope, warnings, ctx)?;
     Ok(vec![node_copy])
 }
 
@@ -181,7 +213,8 @@ pub fn materialize_one_root(
         return Err(LaplogosError::new("root cannot have for"));
     }
 
-    let nodes = materialize_many(root, state, &MaterializeScope::default(), warnings)?;
+    let mut ctx = MaterializeContext::default();
+    let nodes = materialize_many(root, state, &MaterializeScope::default(), warnings, &mut ctx)?;
     match nodes.len() {
         1 => Ok(nodes.into_iter().next().unwrap()),
         0 => Err(LaplogosError::new("root if=false is fatal")),
@@ -228,6 +261,7 @@ fn materialize_children(
     state: &LaplogosState,
     scope: &MaterializeScope,
     warnings: &mut Vec<String>,
+    ctx: &mut MaterializeContext,
 ) -> Result<(), LaplogosError> {
     let children = match node.c.take() {
         Some(children) => children,
@@ -236,7 +270,7 @@ fn materialize_children(
 
     let mut out = Vec::new();
     for child in children {
-        let mut materialized = materialize_many(&child, state, scope, warnings)?;
+        let mut materialized = materialize_many(&child, state, scope, warnings, ctx)?;
         out.append(&mut materialized);
     }
 

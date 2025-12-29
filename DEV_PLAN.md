@@ -761,22 +761,22 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 **目的:** 公開後に「破壊的変更で詰む」事故を避け、Preview としての約束事を固定する。
 
-- [ ] **Schema 互換性ポリシー策定**
+- [x] **Schema 互換性ポリシー策定**
 
   - 破壊的変更の定義（必須フィールド追加/意味変更/ID 制約変更 等）
   - `schema v` 不一致時の挙動（拒否・Error View・ログ出力）を仕様として明記
 
-- [ ] **SemVer 運用方針（Preview 版）を明記**
+- [x] **SemVer 運用方針（Preview 版）を明記**
 
   - `laplogos_core` / `laplogos_web` のバージョン付けルール
   - 互換性の保証範囲（Preview では「破壊的変更あり得る」を明示するか等）
 
-- [ ] **サポート対象環境の固定**
+- [x] **サポート対象環境の固定**
 
   - Node バージョン（SSR/テスト/CI で統一）
   - 対象ブラウザ（最低ライン）
 
-- [ ] **配布形態の決定**
+- [x] **配布形態の決定**
 
   - 配布単位（monorepo のまま / package 化 / wasm 配布方法）
   - “Preview の利用方法” を 1 パターンに固定（README に反映）
@@ -789,27 +789,27 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 **目的:** “AI 生成データを実行する” 以上、公開前に最低限の守りを固める。
 
-- [ ] **脅威モデル（簡易）を作成**
+- [x] **脅威モデル（簡易）を作成**
 
   - 入力点：Schema(JSON)、State、Fetch(URL)、SSR 埋め込み、Router(page)
   - 主要リスク：XSS、任意通信、DoS（巨大ツリー/無限更新）、情報漏えい
 
-- [ ] **入力バリデーションの再点検（仕様化）**
+- [x] **入力バリデーションの再点検（仕様化）**
 
   - Global ID Constraint（許可文字種）の適用範囲が全経路で保証されていること
   - Unknown/Invalid Action の Drop ＋ログ（Debug View 含む）方針の固定
 
-- [ ] **Capability 運用のデフォルト方針を固定**
+- [x] **Capability 運用のデフォルト方針を固定**
 
   - `allowed_actions` / `allowed_hosts` のデフォルト（基本 deny）
   - Fetch 時の追加制約（必要なら：method/headers/credentials 等の扱いを明記）
 
-- [ ] **SSR まわりのセキュリティ仕様の固定**
+- [x] **SSR まわりのセキュリティ仕様の固定**
 
   - JSON 埋め込みのエスケープ方針（どの文字をどう扱うか）
   - Hydration 失敗時フォールバックの挙動を仕様として明記
 
-- [ ] **依存関係・サプライチェーンの最低限チェック方針**
+- [x] **依存関係・サプライチェーンの最低限チェック方針**
 
   - Rust / Node の依存をどう点検するか（頻度・CI に入れる/入れない）
 
@@ -821,21 +821,21 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 **目的:** 公開後に「壊れた・真っ白」を最短で原因特定できるようにする。
 
-- [ ] **ログ設計の確定**
+- [x] **ログ設計の確定**
 
   - warn/error の基準、Action/Schema/Render/Patch のログ粒度
   - Debug View に出す情報（Action Log / State / Schema Tree / Error Log）の確定
 
-- [ ] **エラー表示（Error View）方針の確定**
+- [x] **エラー表示（Error View）方針の確定**
 
   - Schema 不正、patch 適用失敗、hydration 失敗、fetch 失敗 それぞれの見せ方
 
-- [ ] **バグ報告に必要な“再現パッケージ”方針**
+- [x] **バグ報告に必要な“再現パッケージ”方針**
 
   - 最低限：page 識別子、schema v、runtime version、入力 JSON、State、直近 Action ログ
   - 収集手段（UI でコピーできる/ログに出る/ファイルで落とせる等）を決める
 
-- [ ] **SSR/CSR の差分調査を容易にする情報表示**
+- [x] **SSR/CSR の差分調査を容易にする情報表示**
 
   - どの経路（SSR 生成/CSR hydrate/CSR 更新）で表示されたかが分かるようにする
 
@@ -847,19 +847,19 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 **目的:** “動く” ではなく “使える” を担保し、Preview の上限を宣言できる状態にする。
 
-- [ ] **ベンチ・負荷シナリオの定義（Preview 用）**
+- [x] **ベンチ・負荷シナリオの定義（Preview 用）**
 
   - 大きいツリー、長いリスト、頻繁な State 更新、入力中更新、並び替え
 
-- [ ] **計測ポイントの確定**
+- [x] **計測ポイントの確定**
 
   - normalize/materialize/diff/patch apply/hydration の時間を追える状態にする
 
-- [ ] **性能ボトルネックの一次改善**
+- [x] **性能ボトルネックの一次改善**
 
   - “明らかに重い/不安定” を潰す（フォーカス、reorder、連続 dispatch など）
 
-- [ ] **Preview 制約の明文化**
+- [x] **Preview 制約の明文化**
 
   - 例：最大ノード数、ループの最大要素数、許容更新頻度、禁止パターン
   - DoS 的入力（巨大 JSON 等）の扱い（拒否/制限/警告）を決める
@@ -872,21 +872,21 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 **目的:** 誰がやっても同じ手順で動き、CI/本番で差異が出ないようにする。
 
-- [ ] **ビルド成果物と手順の固定**
+- [x] **ビルド成果物と手順の固定**
 
   - wasm 生成、web ビルド、SSR での wasm 初期化、CSR での配信経路の標準化
 
-- [ ] **環境差分（local/CI/prod）前提の固定**
+- [x] **環境差分（local/CI/prod）前提の固定**
 
   - Node runtime 前提の明記（SSR）
   - ファイルパス/アセット配信の前提（デプロイ先でズレない設計にする）
 
-- [ ] **CI 上での再現性担保**
+- [x] **CI 上での再現性担保**
 
   - ビルド → テスト（Phase12）までを CI で一貫実行できる状態
   - 生成物の扱い（キャッシュ/成果物保存の方針）を決める
 
-- [ ] **Preview 用デプロイの“1 つの正解”を決める**
+- [x] **Preview 用デプロイの“1 つの正解”を決める**
 
   - 実行方法（例：Node SSR で動かす）を一本化
   - 既知の制約（edge 不可等）があれば明記
@@ -899,27 +899,27 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 **目的:** 第三者（または未来の自分）が迷わず触れ、制約も理解できる状態にする。
 
-- [ ] **README（Getting Started）**
+- [x] **README（Getting Started）**
 
   - セットアップ、起動、最小サンプルの動かし方、よくある詰まり
 
-- [ ] **Schema v1 仕様書（短縮キー含む）**
+- [x] **Schema v1 仕様書（短縮キー含む）**
 
   - Node 種別、props、if/for、ID 制約、ActionSpec（set/inc/fetch）、禁止事項（式禁止等）
 
-- [ ] **セキュリティ/Capability の説明**
+- [x] **セキュリティ/Capability の説明**
 
   - allowed_actions/allowed_hosts の思想、デフォルト、運用例
 
-- [ ] **SSR/CSR/Hydration の挙動説明**
+- [x] **SSR/CSR/Hydration の挙動説明**
 
   - フロー図レベルで OK（SSR 生成 →hydrate→ 更新、失敗時フォールバック）
 
-- [ ] **サンプルページ/サンプル JSON**
+- [x] **サンプルページ/サンプル JSON**
 
   - 最小 UI、フォーム入力、ループ、ルーティング、fetch（許可リスト前提）
 
-- [ ] **Preview としての制約・既知の非対応**
+- [x] **Preview としての制約・既知の非対応**
 
   - Phase16 で定義した上限、非対応機能、破壊的変更の可能性の明記
 
