@@ -3,7 +3,7 @@ use serde_json::{Map, Value};
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use js_sys::{Date, Function, JSON};
+use js_sys::{Date, Function, JSON, Reflect, Uint8Array};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
@@ -49,6 +49,8 @@ pub struct LaplogosNode {
     pub t: String,
     #[serde(rename = "p", default)]
     pub p: HashMap<String, Value>,
+    #[serde(skip, default)]
+    pub bind_key: Option<String>,
     #[serde(rename = "c", default)]
     pub c: Option<Vec<LaplogosNode>>,
     #[serde(rename = "if", default)]
@@ -538,6 +540,7 @@ impl LaplogosEngine {
             let mut opts = web_sys::RequestInit::new();
             opts.method("GET");
             opts.credentials(web_sys::RequestCredentials::Omit);
+            opts.redirect(web_sys::RequestRedirect::Manual);
             if let Some(controller) = controller.as_ref() {
                 opts.signal(Some(&controller.signal()));
             }
@@ -579,6 +582,15 @@ impl LaplogosEngine {
                     return;
                 }
             };
+
+            let status = response.status();
+            if (300..400).contains(&status)
+                || response.type_() == web_sys::ResponseType::Opaqueredirect
+            {
+                engine.log_warn("fetch redirect is not allowed");
+                engine.dispatch_actions(on_fail);
+                return;
+            }
 
             if !response.ok() {
                 engine.log_warn("fetch response is not ok");
@@ -634,28 +646,15 @@ impl LaplogosEngine {
                 }
             }
 
-            let text_promise = match response.text() {
-                Ok(promise) => promise,
-                Err(_) => {
-                    engine.log_warn("fetch response text failed");
+            let text =
+                match Self::read_response_text_limited(&response, FETCH_MAX_JSON_BYTES).await {
+                Ok(text) => text,
+                Err(message) => {
+                    engine.log_warn(&message);
                     engine.dispatch_actions(on_fail);
                     return;
                 }
             };
-            let text_value = JsFuture::from(text_promise).await;
-            let text = match text_value {
-                Ok(val) => val.as_string().unwrap_or_default(),
-                Err(_) => {
-                    engine.log_warn("fetch response text failed");
-                    engine.dispatch_actions(on_fail);
-                    return;
-                }
-            };
-            if text.len() > FETCH_MAX_JSON_BYTES {
-                engine.log_warn("fetch response too large");
-                engine.dispatch_actions(on_fail);
-                return;
-            }
             if JSON::parse(&text).is_err() {
                 engine.log_warn("fetch response is not valid JSON");
                 engine.dispatch_actions(on_fail);
@@ -664,6 +663,71 @@ impl LaplogosEngine {
 
             engine.dispatch_actions(on_success);
         });
+    }
+
+    async fn read_response_text_limited(
+        response: &web_sys::Response,
+        max_bytes: usize,
+    ) -> Result<String, String> {
+        if let Some(body) = response.body() {
+            let get_reader = Reflect::get(body.as_ref(), &JsValue::from_str("getReader"))
+                .map_err(|_| "fetch response text failed".to_string())?
+                .dyn_into::<Function>()
+                .map_err(|_| "fetch response text failed".to_string())?;
+            let reader = get_reader
+                .call0(body.as_ref())
+                .map_err(|_| "fetch response text failed".to_string())?;
+            let read_fn = Reflect::get(&reader, &JsValue::from_str("read"))
+                .map_err(|_| "fetch response text failed".to_string())?
+                .dyn_into::<Function>()
+                .map_err(|_| "fetch response text failed".to_string())?;
+
+            let mut bytes: Vec<u8> = Vec::new();
+            loop {
+                let read_promise = read_fn
+                    .call0(&reader)
+                    .map_err(|_| "fetch response text failed".to_string())?;
+                let chunk = JsFuture::from(read_promise)
+                    .await
+                    .map_err(|_| "fetch response text failed".to_string())?;
+                let done = Reflect::get(&chunk, &JsValue::from_str("done"))
+                    .map_err(|_| "fetch response text failed".to_string())?
+                    .as_bool()
+                    .unwrap_or(false);
+                if done {
+                    break;
+                }
+                let value = Reflect::get(&chunk, &JsValue::from_str("value"))
+                    .map_err(|_| "fetch response text failed".to_string())?;
+                let chunk_array = Uint8Array::new(&value);
+                let mut buffer = vec![0u8; chunk_array.length() as usize];
+                chunk_array.copy_to(&mut buffer[..]);
+                if bytes.len() + buffer.len() > max_bytes {
+                    if let Ok(cancel_fn) = Reflect::get(&reader, &JsValue::from_str("cancel"))
+                        .and_then(|v| v.dyn_into::<Function>())
+                    {
+                        let _ = cancel_fn.call0(&reader);
+                    }
+                    return Err("fetch response too large".to_string());
+                }
+                bytes.extend_from_slice(&buffer);
+            }
+
+            return String::from_utf8(bytes)
+                .map_err(|_| "fetch response text failed".to_string());
+        }
+
+        let text_promise = response
+            .text()
+            .map_err(|_| "fetch response text failed".to_string())?;
+        let text_value = JsFuture::from(text_promise)
+            .await
+            .map_err(|_| "fetch response text failed".to_string())?;
+        let text = text_value.as_string().unwrap_or_default();
+        if text.len() > max_bytes {
+            return Err("fetch response too large".to_string());
+        }
+        Ok(text)
     }
 
     fn dispatch_actions(&self, actions: Vec<Value>) {

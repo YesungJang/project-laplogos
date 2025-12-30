@@ -7,6 +7,11 @@ fn text_from_value(val: &serde_json::Value) -> String {
     val.as_str().map(|s| s.to_owned()).unwrap_or_else(|| val.to_string())
 }
 
+fn is_disallowed_href(href: &str) -> bool {
+    let lower = href.trim().to_ascii_lowercase();
+    lower.starts_with("javascript:") || lower.starts_with("data:")
+}
+
 pub fn render_node(
     document: &Document,
     node: &LaplogosNode,
@@ -22,7 +27,6 @@ pub fn render_node(
     };
 
     let element = document.create_element(tag)?;
-    element.set_attribute("id", &node.i)?;
     element.set_attribute("data-laplogos-id", &node.i)?;
 
     match node.t.as_str() {
@@ -37,28 +41,34 @@ pub fn render_node(
             }
         }
         "Inp" => {
-            if let Some(val) = node.p.get("val").and_then(|v| v.as_str()) {
-                if !val.starts_with('$') || val.len() <= 1 {
-                    if let Some(engine) = engine {
-                        engine.log_warn("Inp.p.val must be $key");
-                    }
-                } else if let Some(engine) = engine {
-                    let key = val.trim_start_matches('$').to_string();
+            if let Some(val) = node.p.get("val") {
+                element.set_attribute("value", &text_from_value(val))?;
+            }
+            if let Some(engine) = engine {
+                if let Some(key) = node.bind_key.as_ref() {
                     let action_json = serde_json::json!({
                         "t": "set",
                         "d": { "key": key, "val_from": "event.value" }
                     })
                     .to_string();
                     attach_event_listener(&element, "input", vec![action_json], engine)?;
+                } else {
+                    engine.log_warn("Inp.p.val must be $key");
                 }
             }
         }
         "Lnk" => {
             if let Some(href) = node.p.get("href") {
                 let href_text = text_from_value(href);
-                element.set_attribute("href", &href_text)?;
-                if let Some(engine) = engine {
-                    attach_nav_listener(&element, &href_text, engine)?;
+                if is_disallowed_href(&href_text) {
+                    if let Some(engine) = engine {
+                        engine.log_warn("Lnk.p.href is not allowed");
+                    }
+                } else {
+                    element.set_attribute("href", &href_text)?;
+                    if let Some(engine) = engine {
+                        attach_nav_listener(&element, &href_text, engine)?;
+                    }
                 }
             }
             if let Some(label) = node.p.get("label") {
@@ -139,24 +149,25 @@ fn bind_events_for_node(
 
     match node.t.as_str() {
         "Inp" => {
-            if let Some(val) = node.p.get("val").and_then(|v| v.as_str()) {
-                if !val.starts_with('$') || val.len() <= 1 {
-                    engine.log_warn("Inp.p.val must be $key");
-                } else {
-                    let key = val.trim_start_matches('$').to_string();
-                    let action_json = serde_json::json!({
-                        "t": "set",
-                        "d": { "key": key, "val_from": "event.value" }
-                    })
-                    .to_string();
-                    attach_event_listener(&element, "input", vec![action_json], engine)?;
-                }
+            if let Some(key) = node.bind_key.as_ref() {
+                let action_json = serde_json::json!({
+                    "t": "set",
+                    "d": { "key": key, "val_from": "event.value" }
+                })
+                .to_string();
+                attach_event_listener(&element, "input", vec![action_json], engine)?;
+            } else {
+                engine.log_warn("Inp.p.val must be $key");
             }
         }
         "Lnk" => {
             if let Some(href) = node.p.get("href") {
                 let href_text = text_from_value(href);
-                attach_nav_listener(&element, &href_text, engine)?;
+                if is_disallowed_href(&href_text) {
+                    engine.log_warn("Lnk.p.href is not allowed");
+                } else {
+                    attach_nav_listener(&element, &href_text, engine)?;
+                }
             }
         }
         _ => {}
@@ -284,6 +295,10 @@ pub fn apply_patches(
                 }
                 target.set_attribute(key, val)?;
             }
+            Patch::RemoveAttr { id, key } => {
+                let target = find_by_id(&document, id)?;
+                target.remove_attribute(key)?;
+            }
             Patch::ReorderChildren {
                 parent_id,
                 ordered_ids,
@@ -317,10 +332,10 @@ pub fn render_to_string(node: &LaplogosNode) -> String {
         _ => "div",
     };
 
-    let mut attrs = vec![
-        format!("id=\"{}\"", escape_attr(&node.i)),
-        format!("data-laplogos-id=\"{}\"", escape_attr(&node.i)),
-    ];
+    let mut attrs = vec![format!(
+        "data-laplogos-id=\"{}\"",
+        escape_attr(&node.i)
+    )];
 
     match node.t.as_str() {
         "Inp" => {
@@ -330,7 +345,10 @@ pub fn render_to_string(node: &LaplogosNode) -> String {
         }
         "Lnk" => {
             if let Some(href) = node.p.get("href") {
-                attrs.push(format!("href=\"{}\"", escape_attr(&text_from_value(href))));
+                let href_text = text_from_value(href);
+                if !is_disallowed_href(&href_text) {
+                    attrs.push(format!("href=\"{}\"", escape_attr(&href_text)));
+                }
             }
         }
         _ => {}

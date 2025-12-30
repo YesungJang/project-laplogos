@@ -22,6 +22,7 @@
 - Global ID Constraint は全レンダリング経路で必須
 - Unknown/Invalid Action は Drop + warn/error log
 - ループ/if 制約は materialize 時に厳格チェック
+- `Lnk.p.href` は `javascript:` / `data:` を拒否
 
 ## Capability defaults
 
@@ -36,6 +37,7 @@
 
 - method: GET のみ
 - credentials: omit 固定
+- redirect: manual（リダイレクト非追従）
 - headers: 追加禁止
 - timeout: 10s
 - response: `Content-Type: application/json` 必須

@@ -257,6 +257,20 @@ fn apply_text(node: &mut LaplogosNode, state: &LaplogosState, scope: &Materializ
         }
         "Inp" => {
             if let Some(val) = node.p.get("val") {
+                if let Some(raw) = val.as_str() {
+                    if raw.starts_with('$') && raw.len() > 1 {
+                        let key = raw.trim_start_matches('$').to_string();
+                        node.bind_key = Some(key.clone());
+                        let resolved = state
+                            .data
+                            .get(&key)
+                            .map(|v| v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()))
+                            .unwrap_or_default();
+                        node.p
+                            .insert("val".to_string(), Value::String(resolved));
+                        return;
+                    }
+                }
                 let resolved = resolve_text(val, state, scope);
                 node.p
                     .insert("val".to_string(), Value::String(resolved));

@@ -105,6 +105,7 @@ fn normalize_node(
         i: id,
         t,
         p: node.p.clone(),
+        bind_key: None,
         c: None,
         if_: node.if_.clone(),
         for_: node.for_.clone(),

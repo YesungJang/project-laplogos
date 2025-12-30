@@ -8,6 +8,7 @@ fn base_node(id: &str, t: &str) -> LaplogosNode {
         i: id.to_string(),
         t: t.to_string(),
         p: HashMap::new(),
+        bind_key: None,
         c: None,
         if_: None,
         for_: None,
@@ -42,6 +43,24 @@ fn diff_updates_text_value() {
 }
 
 #[test]
+fn diff_emits_remove_attr_when_missing() {
+    let mut old = base_node("root", "Box");
+    old.p
+        .insert("class".to_string(), Value::String("old".to_string()));
+    let new = base_node("root", "Box");
+
+    let patches = diff(&old, &new);
+    assert_eq!(patches.len(), 1);
+    match &patches[0] {
+        Patch::RemoveAttr { id, key } => {
+            assert_eq!(id, "root");
+            assert_eq!(key, "class");
+        }
+        other => panic!("unexpected patch: {:?}", other),
+    }
+}
+
+#[test]
 fn diff_emits_reorder_children() {
     let mut old_root = base_node("root", "Box");
     old_root.c = Some(vec![
@@ -66,6 +85,52 @@ fn diff_emits_reorder_children() {
         } => {
             assert_eq!(parent_id, "root");
             assert_eq!(ordered_ids, &vec!["c".to_string(), "b".to_string(), "a".to_string()]);
+        }
+        other => panic!("unexpected patch: {:?}", other),
+    }
+}
+
+#[test]
+fn diff_reorders_with_inserted_children() {
+    let mut old_root = base_node("root", "Box");
+    old_root.c = Some(vec![
+        base_node("a", "Box"),
+        base_node("b", "Box"),
+        base_node("c", "Box"),
+    ]);
+
+    let mut new_root = base_node("root", "Box");
+    new_root.c = Some(vec![
+        base_node("a", "Box"),
+        base_node("x", "Box"),
+        base_node("b", "Box"),
+        base_node("c", "Box"),
+    ]);
+
+    let patches = diff(&old_root, &new_root);
+    assert_eq!(patches.len(), 2);
+    match &patches[0] {
+        Patch::Append { parent_id, node } => {
+            assert_eq!(parent_id, "root");
+            assert_eq!(node.i, "x");
+        }
+        other => panic!("unexpected patch: {:?}", other),
+    }
+    match &patches[1] {
+        Patch::ReorderChildren {
+            parent_id,
+            ordered_ids,
+        } => {
+            assert_eq!(parent_id, "root");
+            assert_eq!(
+                ordered_ids,
+                &vec![
+                    "a".to_string(),
+                    "x".to_string(),
+                    "b".to_string(),
+                    "c".to_string()
+                ]
+            );
         }
         other => panic!("unexpected patch: {:?}", other),
     }

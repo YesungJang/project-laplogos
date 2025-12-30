@@ -9,6 +9,7 @@ fn base_node(id: &str, t: &str) -> LaplogosNode {
         i: id.to_string(),
         t: t.to_string(),
         p: HashMap::new(),
+        bind_key: None,
         c: None,
         if_: None,
         for_: None,
@@ -42,7 +43,7 @@ fn patch_order_is_stable_and_ids_are_valid() {
     new_root.c = Some(vec![new_b, txt_node("c", "three")]);
 
     let patches = diff(&old_root, &new_root);
-    assert_eq!(patches.len(), 4);
+    assert_eq!(patches.len(), 5);
 
     match &patches[0] {
         Patch::UpdateAttr { id, key, val } => {
@@ -64,6 +65,10 @@ fn patch_order_is_stable_and_ids_are_valid() {
         Patch::Append { parent_id, .. } => assert_eq!(parent_id, "root"),
         other => panic!("unexpected patch order: {:?}", other),
     }
+    match &patches[4] {
+        Patch::ReorderChildren { parent_id, .. } => assert_eq!(parent_id, "root"),
+        other => panic!("unexpected patch order: {:?}", other),
+    }
 
     for patch in &patches {
         match patch {
@@ -78,6 +83,7 @@ fn patch_order_is_stable_and_ids_are_valid() {
             }
             Patch::UpdateText { id, .. } => assert!(is_valid_id(id)),
             Patch::UpdateAttr { id, .. } => assert!(is_valid_id(id)),
+            Patch::RemoveAttr { id, .. } => assert!(is_valid_id(id)),
             Patch::ReorderChildren { parent_id, ordered_ids } => {
                 assert!(is_valid_id(parent_id));
                 for id in ordered_ids {

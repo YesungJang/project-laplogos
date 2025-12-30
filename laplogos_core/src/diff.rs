@@ -9,6 +9,7 @@ pub enum Patch {
     Replace { id: String, node: LaplogosNode },
     UpdateText { id: String, val: String },
     UpdateAttr { id: String, key: String, val: String },
+    RemoveAttr { id: String, key: String },
     ReorderChildren { parent_id: String, ordered_ids: Vec<String> },
 }
 
@@ -38,9 +39,9 @@ pub fn diff(old: &LaplogosNode, new: &LaplogosNode) -> Vec<Patch> {
 }
 
 fn diff_props(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) {
-    let mut keys: Vec<&String> = new.p.keys().collect();
-    keys.sort();
-    for key in keys {
+    let mut new_keys: Vec<&String> = new.p.keys().collect();
+    new_keys.sort();
+    for key in new_keys {
         let new_val = new.p.get(key).expect("key from map");
         let old_val = old.p.get(key);
         if old_val == Some(new_val) {
@@ -56,6 +57,10 @@ fn diff_props(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) 
                 id: new.i.clone(),
                 val: value_to_string(new_val),
             }),
+            ("Lnk", "label") => patches.push(Patch::UpdateText {
+                id: new.i.clone(),
+                val: value_to_string(new_val),
+            }),
             ("Inp", "val") => patches.push(Patch::UpdateAttr {
                 id: new.i.clone(),
                 key: "value".to_string(),
@@ -65,6 +70,38 @@ fn diff_props(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) 
                 id: new.i.clone(),
                 key: key.clone(),
                 val: value_to_string(new_val),
+            }),
+        }
+    }
+
+    let mut old_keys: Vec<&String> = old.p.keys().collect();
+    old_keys.sort();
+    for key in old_keys {
+        if new.p.contains_key(key) {
+            continue;
+        }
+
+        match (new.t.as_str(), key.as_str()) {
+            ("Txt", "val") => patches.push(Patch::UpdateText {
+                id: new.i.clone(),
+                val: "".to_string(),
+            }),
+            ("Btn", "label") => patches.push(Patch::UpdateText {
+                id: new.i.clone(),
+                val: "".to_string(),
+            }),
+            ("Lnk", "label") => patches.push(Patch::UpdateText {
+                id: new.i.clone(),
+                val: "".to_string(),
+            }),
+            ("Inp", "val") => patches.push(Patch::UpdateAttr {
+                id: new.i.clone(),
+                key: "value".to_string(),
+                val: "".to_string(),
+            }),
+            _ => patches.push(Patch::RemoveAttr {
+                id: new.i.clone(),
+                key: key.clone(),
             }),
         }
     }
@@ -102,15 +139,11 @@ fn diff_children(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch
     let old_ids: Vec<String> = old_children.iter().map(|n| n.i.clone()).collect();
     let new_ids: Vec<String> = new_children.iter().map(|n| n.i.clone()).collect();
 
-    if old_ids.len() == new_ids.len() {
-        let old_set: HashSet<String> = old_ids.iter().cloned().collect();
-        let new_set: HashSet<String> = new_ids.iter().cloned().collect();
-        if old_set == new_set && old_ids != new_ids {
-            patches.push(Patch::ReorderChildren {
-                parent_id: new.i.clone(),
-                ordered_ids: new_ids,
-            });
-        }
+    if !new_ids.is_empty() && old_ids != new_ids {
+        patches.push(Patch::ReorderChildren {
+            parent_id: new.i.clone(),
+            ordered_ids: new_ids,
+        });
     }
 }
 

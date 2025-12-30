@@ -12,6 +12,7 @@ fn node(
         i: id.to_string(),
         t: t.to_string(),
         p,
+        bind_key: None,
         c,
         if_: None,
         for_: None,
