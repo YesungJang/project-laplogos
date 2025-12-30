@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 type EngineModule = typeof import("laplogos_core");
 
@@ -40,27 +40,40 @@ function parseJsonArray(text: string) {
 }
 
 export function DebugView({ engine, refreshTrigger, renderSource }: Props) {
-  const [stateText, setStateText] = useState<string>("{}");
-  const [actionLogText, setActionLogText] = useState<string>("");
-  const [errorLogText, setErrorLogText] = useState<string>("");
-  const [pageText, setPageText] = useState<string>("{}");
-  const [metricsText, setMetricsText] = useState<string>("{}");
   const [copyStatus, setCopyStatus] = useState<string>("");
 
-  useEffect(() => {
-    if (!engine) return;
+  const snapshot = useMemo(() => {
+    void refreshTrigger;
+    if (!engine) {
+      return {
+        stateText: "{}",
+        actionLogText: "",
+        errorLogText: "",
+        pageText: "{}",
+        metricsText: "{}",
+      };
+    }
     try {
-      setStateText(engine.get_state_json());
-      setActionLogText(engine.get_action_log_json());
-      setErrorLogText(engine.get_error_log_json());
-      setPageText(engine.get_page_json());
-      setMetricsText(engine.get_metrics_json());
+      return {
+        stateText: engine.get_state_json(),
+        actionLogText: engine.get_action_log_json(),
+        errorLogText: engine.get_error_log_json(),
+        pageText: engine.get_page_json(),
+        metricsText: engine.get_metrics_json(),
+      };
     } catch (e) {
       console.error("Failed to read state", e);
+      return {
+        stateText: "{}",
+        actionLogText: "",
+        errorLogText: "",
+        pageText: "{}",
+        metricsText: "{}",
+      };
     }
   }, [engine, refreshTrigger]);
 
-  const errorItems = parseJsonArray(errorLogText);
+  const errorItems = parseJsonArray(snapshot.errorLogText);
   const hasContainerIdMissing = errorItems.some(
     (item) => typeof item === "string" && item.includes("container id is not set")
   );
@@ -149,19 +162,19 @@ export function DebugView({ engine, refreshTrigger, renderSource }: Props) {
         <section>
           <h3 className="text-sm font-semibold text-slate-900">State</h3>
           <pre className="mt-2 max-h-40 overflow-auto text-xs text-slate-800">
-            {prettyJson(stateText)}
+            {prettyJson(snapshot.stateText)}
           </pre>
         </section>
         <section>
           <h3 className="text-sm font-semibold text-slate-900">Schema Tree</h3>
           <pre className="mt-2 max-h-40 overflow-auto text-xs text-slate-800">
-            {prettyJson(pageText)}
+            {prettyJson(snapshot.pageText)}
           </pre>
         </section>
         <section>
           <h3 className="text-sm font-semibold text-slate-900">Action Log</h3>
           <pre className="mt-2 max-h-32 overflow-auto text-xs text-slate-800">
-            {parseJsonArray(actionLogText).join("\n")}
+            {parseJsonArray(snapshot.actionLogText).join("\n")}
           </pre>
         </section>
         <section>
@@ -173,7 +186,7 @@ export function DebugView({ engine, refreshTrigger, renderSource }: Props) {
         <section>
           <h3 className="text-sm font-semibold text-slate-900">Perf</h3>
           <pre className="mt-2 max-h-24 overflow-auto text-xs text-slate-800">
-            {prettyJson(metricsText)}
+            {prettyJson(snapshot.metricsText)}
           </pre>
         </section>
       </div>

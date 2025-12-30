@@ -201,7 +201,7 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         setErrorFrom(err, "Failed to dispatch action");
       }
     },
-    [engine, containerId, error, setErrorFrom]
+    [engine, error, setErrorFrom]
   );
 
   return { engine, dispatch, refreshTrigger, error, renderSource };
