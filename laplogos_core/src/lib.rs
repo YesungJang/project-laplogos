@@ -145,7 +145,7 @@ impl LaplogosEngine {
         let (schema_v, v_missing) = extract_schema_version(&raw)
             .map_err(|e| JsValue::from_str(&e.message))?;
         if let Err(err) = ensure_supported_schema_version(schema_v) {
-            self.log_error(&err);
+            web_sys::console::error_1(&JsValue::from_str(&err.message));
             return Err(JsValue::from_str(&err.message));
         }
 
@@ -242,8 +242,10 @@ impl LaplogosEngine {
             .map_err(|e| JsValue::from_str(&format!("Invalid JSON: {e}")))?;
         let (schema_v, v_missing) = extract_schema_version(&raw)
             .map_err(|e| JsValue::from_str(&e.message))?;
-        ensure_supported_schema_version(schema_v)
-            .map_err(|e| JsValue::from_str(&e.message))?;
+        if let Err(err) = ensure_supported_schema_version(schema_v) {
+            self.log_error(&err);
+            return Err(JsValue::from_str(&err.message));
+        }
 
         let normalize_start = Date::now();
         let raw_clone = raw.clone();

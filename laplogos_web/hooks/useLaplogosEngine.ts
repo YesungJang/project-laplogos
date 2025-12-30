@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { normalizePagePath } from "../lib/laplogos-path";
+import { loadClientConfig } from "../lib/laplogos-config";
 
 type EngineModule = typeof import("laplogos_core");
 type Engine = InstanceType<EngineModule["LaplogosEngine"]> & {
@@ -129,12 +130,8 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         mod.init_panic_hook();
         const inst = new mod.LaplogosEngine(pageJson);
         if (!active) return;
-        inst.init(
-          JSON.stringify({
-            allowed_actions: ["set", "inc", "fetch", "nav"],
-            allowed_hosts: [],
-          })
-        );
+        const config = await loadClientConfig();
+        inst.init(JSON.stringify(config));
         inst.set_on_nav(onNav);
         inst.set_state_json(stateJson);
         if (bootstrap) {

@@ -56,6 +56,13 @@ npm run start
 
 `LAPLOGOS_WASM_PATH` で SSR の wasm パスを上書きできます。
 
+## 設定（Client）
+
+- `laplogos_web/public/laplogos-config.json` で `allowed_actions` / `allowed_hosts` を設定
+- 環境変数で上書き可能
+  - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_ACTIONS`
+  - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_HOSTS`
+
 ## ドキュメント
 
 - 互換性/Versioning: `docs/preview/compatibility.md`

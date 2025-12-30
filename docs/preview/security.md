@@ -27,6 +27,9 @@
 
 - `allowed_actions` は **必要最小限を列挙**
 - `allowed_hosts` は **デフォルト空（deny）**
+- クライアント設定は `public/laplogos-config.json` または環境変数で注入する
+  - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_ACTIONS`
+  - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_HOSTS`
 
 ## fetch defaults（Preview）
 
