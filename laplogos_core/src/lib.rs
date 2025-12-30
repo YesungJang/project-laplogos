@@ -3,7 +3,7 @@ use serde_json::{Map, Value};
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
-use js_sys::{Date, Function, JSON, Reflect, Uint8Array};
+use js_sys::{Date, Function, JSON, Promise, Reflect, Uint8Array};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
@@ -322,11 +322,6 @@ impl LaplogosEngine {
         self.inner.borrow_mut().container_id = Some(container_id.to_string());
     }
 
-    fn with_page<R>(&self, f: impl FnOnce(&LaplogosPage) -> R) -> R {
-        let inner = self.inner.borrow();
-        f(&inner.normalized_page)
-    }
-
     pub(crate) fn dispatch_with_event(
         &self,
         action_json: &str,
@@ -402,10 +397,6 @@ impl LaplogosEngine {
                 self.update_view_default()
             }
         }
-    }
-
-    pub(crate) fn page_root(&self) -> LaplogosNode {
-        self.with_page(|page| page.root.clone())
     }
 
     fn update_view(&self, container_id: &str) -> Result<(), JsValue> {
@@ -537,12 +528,12 @@ impl LaplogosEngine {
             };
 
             let controller = web_sys::AbortController::new().ok();
-            let mut opts = web_sys::RequestInit::new();
-            opts.method("GET");
-            opts.credentials(web_sys::RequestCredentials::Omit);
-            opts.redirect(web_sys::RequestRedirect::Manual);
+            let opts = web_sys::RequestInit::new();
+            opts.set_method("GET");
+            opts.set_credentials(web_sys::RequestCredentials::Omit);
+            opts.set_redirect(web_sys::RequestRedirect::Manual);
             if let Some(controller) = controller.as_ref() {
-                opts.signal(Some(&controller.signal()));
+                opts.set_signal(Some(&controller.signal()));
             }
 
             let timeout_handle = if let Some(controller) = controller.as_ref() {
@@ -686,6 +677,9 @@ impl LaplogosEngine {
             loop {
                 let read_promise = read_fn
                     .call0(&reader)
+                    .map_err(|_| "fetch response text failed".to_string())?;
+                let read_promise = read_promise
+                    .dyn_into::<Promise>()
                     .map_err(|_| "fetch response text failed".to_string())?;
                 let chunk = JsFuture::from(read_promise)
                     .await

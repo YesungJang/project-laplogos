@@ -104,14 +104,6 @@ pub fn render_node(
     Ok(element)
 }
 
-pub fn update_dom(engine: &LaplogosEngine, container_id: &str) -> Result<(), JsValue> {
-    let (materialized, warnings) = engine.materialize_current()?;
-    for warn in warnings {
-        engine.log_warn(&warn);
-    }
-    update_dom_with_root(container_id, &materialized, Some(engine))
-}
-
 pub fn update_dom_with_root(
     container_id: &str,
     root: &LaplogosNode,

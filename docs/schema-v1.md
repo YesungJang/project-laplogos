@@ -14,6 +14,7 @@
 - `c`: children（任意）
 - `if`: boolean 判定キー（`$key` 形式）
 - `for`: 配列展開（文字列 or 数値配列のみ）
+  - 展開時は `node.i:item` が生成され、配下の ID もその prefix で名前空間化される
 - `on`: イベント → Action 配列
 
 ## Props（主要）

@@ -17,18 +17,26 @@ js-sys = "0.3"
 [dependencies.web-sys]
 version = "0.3"
 features = [
+    "AbortController",
+    "AbortSignal",
     "Document",
     "Element",
     "Event",
     "EventTarget",
+    "Headers",
     "Node",
-    "Window",
+    "ReadableStream",
+    "RequestCredentials",
+    "RequestInit",
+    "RequestRedirect",
     "HtmlElement",
     "HtmlButtonElement",
     "HtmlParagraphElement",
     "HtmlDivElement",
     "HtmlInputElement",
     "Response",
+    "ResponseType",
     "Url",
+    "Window",
     "console",
 ]

@@ -24,6 +24,7 @@
 ## Guardrails（core 強制）
 
 - max nodes: 5000（超過は Fatal）
+- max depth: 256（超過は Fatal）
 - loop expand: 200（超過は Fatal）
 - patch/dispatch: 2000（超過は Fatal）
 - dispatch/sec: 30（超過は Drop + warn）

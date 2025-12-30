@@ -71,10 +71,20 @@ fn snapshot_materialize_with_if_for_ref_and_key() {
         "Box",
         HashMap::new(),
         Some(vec![
-            node("label", "Txt", props(&[("val", Value::String("a".to_string()))]), None),
-            node("idx", "Txt", props(&[("val", Value::String("0".to_string()))]), None),
             node(
-                "title",
+                "row:a:label",
+                "Txt",
+                props(&[("val", Value::String("a".to_string()))]),
+                None,
+            ),
+            node(
+                "row:a:idx",
+                "Txt",
+                props(&[("val", Value::String("0".to_string()))]),
+                None,
+            ),
+            node(
+                "row:a:title",
                 "Txt",
                 props(&[("val", Value::String("Hello".to_string()))]),
                 None,
@@ -86,10 +96,20 @@ fn snapshot_materialize_with_if_for_ref_and_key() {
         "Box",
         HashMap::new(),
         Some(vec![
-            node("label", "Txt", props(&[("val", Value::String("b".to_string()))]), None),
-            node("idx", "Txt", props(&[("val", Value::String("1".to_string()))]), None),
             node(
-                "title",
+                "row:b:label",
+                "Txt",
+                props(&[("val", Value::String("b".to_string()))]),
+                None,
+            ),
+            node(
+                "row:b:idx",
+                "Txt",
+                props(&[("val", Value::String("1".to_string()))]),
+                None,
+            ),
+            node(
+                "row:b:title",
                 "Txt",
                 props(&[("val", Value::String("Hello".to_string()))]),
                 None,
