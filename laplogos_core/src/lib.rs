@@ -270,7 +270,6 @@ impl LaplogosEngine {
         let state = parse_state(raw)?;
         let mut inner = self.inner.borrow_mut();
         inner.state = state;
-        inner.last_materialized = None;
         Ok(())
     }
 

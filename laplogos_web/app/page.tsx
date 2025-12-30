@@ -1,8 +1,7 @@
-import { readFile } from "fs/promises";
-import { resolve } from "path";
 import { LaplogosApp } from "../components/LaplogosApp";
 import { getPageSchema } from "./laplogos-schema";
 import { normalizePagePath } from "../lib/laplogos-path";
+import { escapeJsonForScript, renderLaplogosHtml } from "../lib/laplogos-ssr";
 
 export const runtime = "nodejs";
 

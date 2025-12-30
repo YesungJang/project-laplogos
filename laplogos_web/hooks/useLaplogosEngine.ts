@@ -32,6 +32,24 @@ function isExternalUrl(to: string) {
   return /^https?:\/\//i.test(to);
 }
 
+function shouldForceHydrationFail() {
+  if (process.env.NODE_ENV === "production") return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("laplogosHydrationFail") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function forceHydrationMismatch(containerId: string) {
+  const container = document.getElementById(containerId);
+  const root = container?.firstElementChild;
+  if (root) {
+    root.remove();
+  }
+}
+
 async function fetchPageJson(pathname: string, fallbackJson: string) {
   try {
     const pagePath = normalizePagePath(pathname);
@@ -120,6 +138,9 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         inst.set_on_nav(onNav);
         inst.set_state_json(stateJson);
         if (bootstrap) {
+          if (shouldForceHydrationFail()) {
+            forceHydrationMismatch(containerId);
+          }
           await inst.hydrate(containerId);
           setRenderSource("SSR+Hydration");
         } else {

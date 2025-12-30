@@ -38,7 +38,10 @@ pub fn diff(old: &LaplogosNode, new: &LaplogosNode) -> Vec<Patch> {
 }
 
 fn diff_props(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) {
-    for (key, new_val) in &new.p {
+    let mut keys: Vec<&String> = new.p.keys().collect();
+    keys.sort();
+    for key in keys {
+        let new_val = new.p.get(key).expect("key from map");
         let old_val = old.p.get(key);
         if old_val == Some(new_val) {
             continue;
@@ -76,17 +79,19 @@ fn diff_children(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch
     let new_map: HashMap<String, LaplogosNode> =
         new_children.iter().cloned().map(|n| (n.i.clone(), n)).collect();
 
-    for (id, old_child) in &old_map {
-        if !new_map.contains_key(id) {
-            patches.push(Patch::Remove { id: id.clone() });
+    for old_child in &old_children {
+        if !new_map.contains_key(&old_child.i) {
+            patches.push(Patch::Remove {
+                id: old_child.i.clone(),
+            });
         } else {
-            let new_child = new_map.get(id).unwrap();
+            let new_child = new_map.get(&old_child.i).expect("child exists");
             patches.extend(diff(old_child, new_child));
         }
     }
 
-    for (id, new_child) in &new_map {
-        if !old_map.contains_key(id) {
+    for new_child in &new_children {
+        if !old_map.contains_key(&new_child.i) {
             patches.push(Patch::Append {
                 parent_id: new.i.clone(),
                 node: new_child.clone(),
