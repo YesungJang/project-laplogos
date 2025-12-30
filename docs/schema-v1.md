@@ -8,7 +8,7 @@
 
 ## Node fields
 
-- `i`: ID（`[A-Za-z0-9_:-]+`）
+- `i`: ID（`[A-Za-z0-9_:-]+`、ツリー内で一意）
 - `t`: type（`Box` / `Txt` / `Btn` / `Inp` / `Lnk`）
 - `p`: props（任意）
 - `c`: children（任意）
