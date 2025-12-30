@@ -17,6 +17,7 @@ type Engine = InstanceType<EngineModule["LaplogosEngine"]> & {
 type BootstrapPayload = {
   page?: unknown;
   state?: unknown;
+  config?: unknown;
 };
 
 const WASM_PATH = "/wasm/laplogos_core_bg.wasm";
@@ -65,7 +66,7 @@ async function fetchPageJson(pathname: string, fallbackJson: string) {
   }
 }
 
-function readBootstrap(): { pageJson: string; stateJson: string } | null {
+function readBootstrap(): { pageJson: string; stateJson: string; config?: unknown } | null {
   const el = document.getElementById("laplogos-bootstrap");
   const text = el?.textContent?.trim();
   if (!text) return null;
@@ -76,6 +77,7 @@ function readBootstrap(): { pageJson: string; stateJson: string } | null {
     return {
       pageJson: JSON.stringify(parsed.page),
       stateJson: JSON.stringify(state),
+      config: parsed.config,
     };
   } catch {
     return null;
@@ -130,7 +132,9 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         mod.init_panic_hook();
         const inst = new mod.LaplogosEngine(pageJson);
         if (!active) return;
-        const config = await loadClientConfig();
+        const bootstrapConfig =
+          bootstrap?.config && typeof bootstrap.config === "object" ? bootstrap.config : null;
+        const config = bootstrapConfig ?? (await loadClientConfig());
         inst.init(JSON.stringify(config));
         inst.set_on_nav(onNav);
         inst.set_state_json(stateJson);

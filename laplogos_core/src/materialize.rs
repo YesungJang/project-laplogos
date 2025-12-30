@@ -15,6 +15,7 @@ pub struct MaterializeScope {
 #[derive(Debug, Default)]
 struct MaterializeContext {
     node_count: usize,
+    ids: HashSet<String>,
 }
 
 impl MaterializeContext {
@@ -25,6 +26,13 @@ impl MaterializeContext {
                 "max nodes exceeded: {} > {}",
                 self.node_count, MAX_NODES
             )));
+        }
+        Ok(())
+    }
+
+    fn register_id(&mut self, id: &str) -> Result<(), LaplogosError> {
+        if !self.ids.insert(id.to_string()) {
+            return Err(LaplogosError::new(format!("Duplicate id: {}", id)));
         }
         Ok(())
     }
@@ -187,6 +195,7 @@ pub(crate) fn materialize_many(
                 return Err(LaplogosError::new(format!("Invalid generated id: {}", node_copy.i)));
             }
 
+            ctx.register_id(&node_copy.i)?;
             apply_text(&mut node_copy, state, &child_scope);
             materialize_children(&mut node_copy, state, &child_scope, warnings, ctx)?;
             output.push(node_copy);
@@ -199,6 +208,7 @@ pub(crate) fn materialize_many(
     let mut node_copy = node.clone();
     node_copy.for_ = None;
     node_copy.if_ = None;
+    ctx.register_id(&node_copy.i)?;
     apply_text(&mut node_copy, state, scope);
     materialize_children(&mut node_copy, state, scope, warnings, ctx)?;
     Ok(vec![node_copy])

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
@@ -81,6 +81,7 @@ struct LaplogosEngineInner {
     on_nav: Option<Function>,
     metrics: EngineMetrics,
     dispatch_times: VecDeque<f64>,
+    container_id: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -169,6 +170,7 @@ impl LaplogosEngine {
                     ..EngineMetrics::default()
                 },
                 dispatch_times: VecDeque::new(),
+                container_id: None,
             })),
         };
 
@@ -276,10 +278,12 @@ impl LaplogosEngine {
     }
 
     pub fn rerender(&self, container_id: &str) -> Result<(), JsValue> {
+        self.set_container_id(container_id);
         self.update_view(container_id)
     }
 
     pub fn hydrate(&self, container_id: &str) -> Result<(), JsValue> {
+        self.set_container_id(container_id);
         let hydrate_start = Date::now();
         let (materialized, warnings) = self.materialize_current()?;
         for warn in warnings {
@@ -310,6 +314,10 @@ impl LaplogosEngine {
         web_sys::console::warn_1(&JsValue::from_str(message));
         let mut inner = self.inner.borrow_mut();
         inner.error_log.push(format!("WARN: {}", message));
+    }
+
+    fn set_container_id(&self, container_id: &str) {
+        self.inner.borrow_mut().container_id = Some(container_id.to_string());
     }
 
     fn with_page<R>(&self, f: impl FnOnce(&LaplogosPage) -> R) -> R {
@@ -389,7 +397,7 @@ impl LaplogosEngine {
                     return Ok(());
                 }
 
-                self.update_view("laplogos-root")
+                self.update_view_default()
             }
         }
     }
@@ -442,6 +450,17 @@ impl LaplogosEngine {
         Ok(())
     }
 
+    fn update_view_default(&self) -> Result<(), JsValue> {
+        let container_id = self.inner.borrow().container_id.clone();
+        match container_id {
+            Some(id) => self.update_view(&id),
+            None => {
+                self.log_warn("container id is not set");
+                Ok(())
+            }
+        }
+    }
+
     pub(crate) fn materialize_current(&self) -> Result<(LaplogosNode, Vec<String>), JsValue> {
         let mut warnings = Vec::new();
         let materialized = {
@@ -464,7 +483,8 @@ impl LaplogosEngine {
     }
 
     fn log_action(&self, action: &store::ActionSpec) {
-        let text = serde_json::to_string(action).unwrap_or_else(|_| action.t.clone());
+        let canonical = canonicalize_action(action);
+        let text = serde_json::to_string(&canonical).unwrap_or_else(|_| action.t.clone());
         let mut inner = self.inner.borrow_mut();
         inner.action_log.push(text);
     }
@@ -683,6 +703,40 @@ impl LaplogosEngine {
     }
 }
 
+fn canonicalize_action(action: &store::ActionSpec) -> Value {
+    let mut root = Map::new();
+    root.insert("t".to_string(), Value::String(action.t.clone()));
+
+    let mut keys: Vec<&String> = action.d.keys().collect();
+    keys.sort();
+    let mut d_map = Map::new();
+    for key in keys {
+        if let Some(val) = action.d.get(key) {
+            d_map.insert(key.clone(), canonicalize_value(val));
+        }
+    }
+    root.insert("d".to_string(), Value::Object(d_map));
+    Value::Object(root)
+}
+
+fn canonicalize_value(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            let mut out = Map::new();
+            for key in keys {
+                if let Some(val) = map.get(key) {
+                    out.insert(key.clone(), canonicalize_value(val));
+                }
+            }
+            Value::Object(out)
+        }
+        Value::Array(items) => Value::Array(items.iter().map(canonicalize_value).collect()),
+        _ => value.clone(),
+    }
+}
+
 fn default_schema_version() -> u8 {
     SCHEMA_VERSION_DEFAULT
 }
@@ -795,4 +849,29 @@ fn parse_state(value: Value) -> Result<LaplogosState, JsValue> {
 fn is_external_url(to: &str) -> bool {
     let lower = to.to_ascii_lowercase();
     lower.starts_with("http://") || lower.starts_with("https://")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn schema_version_defaults_to_v1() {
+        let value = json!({ "root": { "i": "root", "t": "Box" } });
+        let (v, missing) = extract_schema_version(&value).expect("extract v");
+        assert_eq!(v, SCHEMA_VERSION_DEFAULT);
+        assert!(missing);
+    }
+
+    #[test]
+    fn schema_version_rejects_non_number() {
+        let value = json!({ "v": "1", "root": { "i": "root", "t": "Box" } });
+        assert!(extract_schema_version(&value).is_err());
+    }
+
+    #[test]
+    fn schema_version_rejects_unsupported() {
+        assert!(ensure_supported_schema_version(2).is_err());
+    }
 }

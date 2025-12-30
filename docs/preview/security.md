@@ -30,6 +30,7 @@
 - クライアント設定は `public/laplogos-config.json` または環境変数で注入する
   - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_ACTIONS`
   - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_HOSTS`
+- SSR で参照する設定ファイルパスは `LAPLOGOS_CONFIG_PATH` で上書き可能
 
 ## fetch defaults（Preview）
 

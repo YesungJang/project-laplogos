@@ -1,10 +1,17 @@
 import { readFile } from "fs/promises";
 import { resolve } from "path";
 
+let cachedWasm: Uint8Array | null = null;
+let cachedWasmPath: string | null = null;
+
 export async function initLaplogosWasm(mod: typeof import("laplogos_core")) {
   const wasmPath =
     process.env.LAPLOGOS_WASM_PATH ?? resolve(process.cwd(), "public/wasm/laplogos_core_bg.wasm");
-  const wasmBytes = await readFile(wasmPath);
+  if (!cachedWasm || cachedWasmPath !== wasmPath) {
+    cachedWasm = await readFile(wasmPath);
+    cachedWasmPath = wasmPath;
+  }
+  const wasmBytes = cachedWasm;
   if (typeof mod.initSync === "function") {
     mod.initSync({ module: wasmBytes });
     return;
@@ -30,7 +37,7 @@ export function escapeJsonForScript(payload: unknown) {
   return JSON.stringify(payload).replace(/</g, "\\u003c");
 }
 
-function renderErrorHtml(message: string) {
+export function renderErrorHtml(message: string) {
   const safe = escapeHtml(message);
   return [
     '<div class="rounded-md border border-rose-200 bg-rose-50 p-4 text-rose-900">',

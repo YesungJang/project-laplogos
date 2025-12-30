@@ -62,6 +62,7 @@ npm run start
 - 環境変数で上書き可能
   - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_ACTIONS`
   - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_HOSTS`
+- SSR 参照の設定パスは `LAPLOGOS_CONFIG_PATH` で上書き可能
 
 ## ドキュメント
 
