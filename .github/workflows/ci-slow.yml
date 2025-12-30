@@ -20,6 +20,8 @@ jobs:
       - name: Build wasm package
         run: wasm-pack build --target web --out-dir pkg
         working-directory: laplogos_core
+      - name: Prepare wasm assets
+        run: node scripts/prepare-wasm.mjs
       - name: Install web deps
         run: npm ci
         working-directory: laplogos_web

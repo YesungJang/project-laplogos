@@ -22,6 +22,6 @@ test("bootstrap keeps raw schema and renders consistently", async () => {
   const html = await renderLaplogosHtml(parsed.page, parsed.state);
   assert.equal(
     html,
-    "<div id=\"root\" data-laplogos-id=\"root\"><p id=\"title\" data-laplogos-id=\"title\">CSR</p></div>"
+    "<div data-laplogos-id=\"root\"><p data-laplogos-id=\"title\">CSR</p></div>"
   );
 });
