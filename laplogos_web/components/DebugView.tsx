@@ -60,6 +60,11 @@ export function DebugView({ engine, refreshTrigger, renderSource }: Props) {
     }
   }, [engine, refreshTrigger]);
 
+  const errorItems = parseJsonArray(errorLogText);
+  const hasContainerIdMissing = errorItems.some(
+    (item) => typeof item === "string" && item.includes("container id is not set")
+  );
+
   const buildReproPackage = () => {
     if (!engine) return "{}";
     const inputPage = parseJson(engine.get_input_page_json());
@@ -136,6 +141,11 @@ export function DebugView({ engine, refreshTrigger, renderSource }: Props) {
         {copyStatus ? <span className="text-slate-500">{copyStatus}</span> : null}
       </div>
       <div className="mt-4 space-y-4">
+        {hasContainerIdMissing ? (
+          <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+            container id が未設定です。埋め込み側で container_id を設定してください。
+          </div>
+        ) : null}
         <section>
           <h3 className="text-sm font-semibold text-slate-900">State</h3>
           <pre className="mt-2 max-h-40 overflow-auto text-xs text-slate-800">
@@ -157,7 +167,7 @@ export function DebugView({ engine, refreshTrigger, renderSource }: Props) {
         <section>
           <h3 className="text-sm font-semibold text-slate-900">Error Log</h3>
           <pre className="mt-2 max-h-32 overflow-auto text-xs text-slate-800">
-            {parseJsonArray(errorLogText).join("\n")}
+            {errorItems.join("\n")}
           </pre>
         </section>
         <section>

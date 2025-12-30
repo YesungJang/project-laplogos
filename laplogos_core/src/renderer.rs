@@ -240,10 +240,14 @@ fn extract_event_value(event: &Event) -> Option<String> {
 
 pub fn apply_patches(
     engine: &LaplogosEngine,
-    container_id: &str,
+    _container_id: &str,
     patches: &[Patch],
-    new_root: &LaplogosNode,
+    _new_root: &LaplogosNode,
 ) -> Result<(), JsValue> {
+    if patches.is_empty() {
+        return Ok(());
+    }
+
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
     let document = window
         .document()
@@ -291,10 +295,6 @@ pub fn apply_patches(
                 }
             }
         }
-    }
-
-    if patches.is_empty() {
-        update_dom_with_root(container_id, new_root, Some(engine))?;
     }
 
     Ok(())

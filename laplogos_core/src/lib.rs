@@ -618,6 +618,22 @@ impl LaplogosEngine {
                 return;
             }
 
+            let content_length = response
+                .headers()
+                .get("content-length")
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+            if !content_length.is_empty() {
+                if let Ok(len) = content_length.trim().parse::<usize>() {
+                    if len > FETCH_MAX_JSON_BYTES {
+                        engine.log_warn("fetch response too large");
+                        engine.dispatch_actions(on_fail);
+                        return;
+                    }
+                }
+            }
+
             let text_promise = match response.text() {
                 Ok(promise) => promise,
                 Err(_) => {
