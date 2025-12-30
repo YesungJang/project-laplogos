@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { DebugView } from "./DebugView";
+import { ErrorView } from "./ErrorView";
 import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
 
 type Props = {
@@ -13,7 +14,10 @@ type Props = {
 const containerId = "laplogos-root";
 
 export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props) {
-  const { engine, dispatch, refreshTrigger } = useLaplogosEngine(initialJson, containerId);
+  const { engine, dispatch, refreshTrigger, error, renderSource } = useLaplogosEngine(
+    initialJson,
+    containerId
+  );
 
   const sendRandom = useMemo(
     () => () => {
@@ -38,14 +42,22 @@ export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props)
               Dispatch random count
             </button>
           </div>
-          <div
-            id={containerId}
-            className="min-h-[200px] rounded-md border border-slate-200 bg-slate-50 p-3"
-            dangerouslySetInnerHTML={{ __html: renderedHtml }}
-            suppressHydrationWarning
-          />
+          {error ? (
+            <ErrorView message={error} />
+          ) : (
+            <div
+              id={containerId}
+              className="min-h-[200px] rounded-md border border-slate-200 bg-slate-50 p-3"
+              dangerouslySetInnerHTML={{ __html: renderedHtml }}
+              suppressHydrationWarning
+            />
+          )}
         </section>
-        <DebugView engine={engine} refreshTrigger={refreshTrigger} />
+        <DebugView
+          engine={engine}
+          refreshTrigger={refreshTrigger}
+          renderSource={renderSource}
+        />
       </div>
       <script
         id="laplogos-bootstrap"

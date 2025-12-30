@@ -95,19 +95,11 @@ pub fn render_node(
 }
 
 pub fn update_dom(engine: &LaplogosEngine, container_id: &str) -> Result<(), JsValue> {
-    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
-    let document = window
-        .document()
-        .ok_or_else(|| JsValue::from_str("No document"))?;
-    let container = document
-        .get_element_by_id(container_id)
-        .ok_or_else(|| JsValue::from_str("Container not found"))?;
-
-    container.set_inner_html("");
-    let root = engine.page_root();
-    let root_el = render_node(&document, &root, Some(engine))?;
-    container.append_child(&root_el)?;
-    Ok(())
+    let (materialized, warnings) = engine.materialize_current()?;
+    for warn in warnings {
+        engine.log_warn(&warn);
+    }
+    update_dom_with_root(container_id, &materialized, Some(engine))
 }
 
 pub fn update_dom_with_root(

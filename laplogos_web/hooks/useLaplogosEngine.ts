@@ -4,6 +4,7 @@ import { normalizePagePath } from "../lib/laplogos-path";
 
 type EngineModule = typeof import("laplogos_core");
 type Engine = InstanceType<EngineModule["LaplogosEngine"]> & {
+  init: (json: string) => void;
   set_on_nav: (cb: (to: string) => void) => void;
   set_page_json: (json: string) => void;
   set_state_json: (json: string) => void;
@@ -17,10 +18,14 @@ type BootstrapPayload = {
   state?: unknown;
 };
 
+const WASM_PATH = "/wasm/laplogos_core_bg.wasm";
+
 type UseLaplogosEngineResult = {
   engine: Engine | null;
   dispatch: (actionJson: string) => Promise<void>;
   refreshTrigger: number;
+  error: string | null;
+  renderSource: string;
 };
 
 function isExternalUrl(to: string) {
@@ -79,8 +84,22 @@ function readBootstrap(): { pageJson: string; stateJson: string } | null {
 export function useLaplogosEngine(initialJson: string, containerId: string): UseLaplogosEngineResult {
   const [engine, setEngine] = useState<Engine | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [renderSource, setRenderSource] = useState<string>("CSR");
   const router = useRouter();
   const pathname = usePathname();
+
+  const setErrorFrom = useCallback((err: unknown, fallback: string) => {
+    if (err instanceof Error) {
+      setError(err.message);
+      return;
+    }
+    if (typeof err === "string") {
+      setError(err);
+      return;
+    }
+    setError(fallback);
+  }, []);
 
   const onNav = useCallback(
     (to: string) => {
@@ -104,12 +123,18 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         const mod = await import("laplogos_core");
         if (!active) return;
         if (typeof mod.default === "function") {
-          await mod.default();
+          await mod.default(WASM_PATH);
         }
         if (!active) return;
         mod.init_panic_hook();
         const inst = new mod.LaplogosEngine(pageJson);
         if (!active) return;
+        inst.init(
+          JSON.stringify({
+            allowed_actions: ["set", "inc", "fetch", "nav"],
+            allowed_hosts: [],
+          })
+        );
         inst.set_on_nav(onNav);
         inst.set_state_json(stateJson);
         if (bootstrap) {
@@ -117,13 +142,17 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
             forceHydrationMismatch(containerId);
           }
           await inst.hydrate(containerId);
+          setRenderSource("SSR+Hydration");
         } else {
           await inst.rerender(containerId);
+          setRenderSource("CSR");
         }
         setEngine(inst);
         setRefreshTrigger((v) => v + 1);
       } catch (err) {
         console.error("Failed to load laplogos engine", err);
+        if (!active) return;
+        setErrorFrom(err, "Failed to load laplogos engine");
       }
     };
 
@@ -132,10 +161,10 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
     return () => {
       active = false;
     };
-  }, [initialJson, containerId, onNav]);
+  }, [initialJson, containerId, onNav, setErrorFrom]);
 
   useEffect(() => {
-    if (!engine) return;
+    if (!engine || error) return;
     let active = true;
 
     const update = async () => {
@@ -144,9 +173,12 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         if (!active) return;
         engine.set_page_json(pageJson);
         await engine.rerender(containerId);
+        setRenderSource("CSR Update");
         setRefreshTrigger((v) => v + 1);
       } catch (err) {
         console.error("Failed to update page", err);
+        if (!active) return;
+        setErrorFrom(err, "Failed to update page");
       }
     };
 
@@ -155,21 +187,21 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
     return () => {
       active = false;
     };
-  }, [engine, pathname, initialJson, containerId]);
+  }, [engine, pathname, initialJson, containerId, error, setErrorFrom]);
 
   const dispatch = useCallback(
     async (actionJson: string) => {
-      if (!engine) return;
+      if (!engine || error) return;
       try {
         engine.dispatch(actionJson);
-        await engine.rerender(containerId);
         setRefreshTrigger((v) => v + 1);
       } catch (err) {
         console.error("Failed to dispatch action", err);
+        setErrorFrom(err, "Failed to dispatch action");
       }
     },
-    [engine, containerId]
+    [engine, containerId, error, setErrorFrom]
   );
 
-  return { engine, dispatch, refreshTrigger };
+  return { engine, dispatch, refreshTrigger, error, renderSource };
 }

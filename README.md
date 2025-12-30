@@ -1,4 +1,4 @@
-# Project laplogos (MVP)
+# Project laplogos (Preview)
 
 **"Human-Unreadable, Machine-Optimal"**
 AI ネイティブ時代の次世代 UI ランタイム＆開発言語プロジェクト。
@@ -20,18 +20,49 @@ AI ネイティブ時代の次世代 UI ランタイム＆開発言語プロジ�
 - `laplogos_core/`: Rust 製ランタイムエンジン (Wasm)
 - `laplogos_web/`: フロントエンド (Next.js) + デバッグ可視化ツール
 
+## 対象環境
+
+- Node.js 20.9+
+- Browser: Chrome/Edge/Firefox 111+、Safari 16.4+
+- Rust（`cargo` / `wasm-pack`）
+
 ## 開発環境セットアップ
 
-### 前提条件
-
-- WSL2 (Ubuntu)
-- Rust (`cargo`, `wasm-pack`)
-- Node.js (v18+)
-
-### 起動手順
+### 起動手順（CSR）
 
 1. **Rust エンジンのビルド**
    ```bash
    cd laplogos_core
    wasm-pack build --target web
    ```
+2. **wasm の配置**
+   ```bash
+   node scripts/prepare-wasm.mjs
+   ```
+3. **Web 起動**
+   ```bash
+   cd laplogos_web
+   npm install
+   npm run dev
+   ```
+
+### SSR での起動
+
+```bash
+cd laplogos_web
+npm run build
+npm run start
+```
+
+`LAPLOGOS_WASM_PATH` で SSR の wasm パスを上書きできます。
+
+## ドキュメント
+
+- 互換性/Versioning: `docs/preview/compatibility.md`
+- セキュリティ: `docs/preview/security.md`
+- 観測性/デバッグ: `docs/preview/observability.md`
+- パフォーマンス: `docs/preview/performance.md`
+- 配布/デプロイ: `docs/preview/release.md`
+- Schema v1: `docs/schema-v1.md`
+- SSR/CSR/Hydration: `docs/ssr-csr-hydration.md`
+- サンプル: `docs/samples/`

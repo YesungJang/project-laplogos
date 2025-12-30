@@ -646,14 +646,283 @@ Hydration 失敗時は **フル再描画（root replace）にフォールバッ�
 
 ---
 
-## 📱 Stage 3: Multi-Platform (Native)
+## Design Decisions（Preview Defaults）
 
-- Phase 13: iOS Runtime（SwiftUI）
-- Phase 14: Android Runtime（Jetpack Compose）
+> Preview 版は「最短でリリース可能状態にする」ことを優先し、仕様の曖昧さと手戻りを避けるために、以下を **デフォルト方針として固定**する。
+> 例外が必要になった場合のみ、このセクションを更新する。
+
+### 1) Compatibility / Versioning
+
+- **Schema 破壊的変更の定義（= schema `v` を上げる）**
+
+  - 必須フィールド追加、型変更、意味変更（解釈変更）
+  - ID 制約（許可文字種）の変更
+  - Diff/Patch の意味が変わり、同一入力で DOM 結果が変わる変更
+
+- **破壊的でない変更（= schema `v` 据え置き）**
+
+  - 新しい Node type (`t`) の追加、任意 props の追加、Debug 情報の追加（既存解釈を変えない範囲）
+
+- **schema `v` 不一致時の挙動：Reject（拒否）**
+
+  - schema version field は **top-level `v`**
+  - **`v` 未指定は v1 として扱う**（Debug View に警告を出す）
+  - サポート外 `v` は **Error View を表示**し、勝手に解釈して描画しない
+  - Debug View に `schema v mismatch` を明示する
+
+- **SemVer 方針（Preview）**
+
+  - `laplogos_core` / `laplogos_web` は **常に同一バージョンでロック**
+  - Git tag `vX.Y.Z` を **唯一の正**とする
+  - `Cargo.toml` / `package.json` が一致しない場合は CI で失敗させる
+  - Preview 期間は **0.x 運用**とし、安定後に `1.0.0` へ移行する
+
+### 2) Supported Runtime Baseline（Preview）
+
+- **SSR ランタイム**：Node.js 20.9+ のみ（Edge は対象外）
+- **ブラウザ**：Chrome/Edge/Firefox 111+、Safari 16.4+ を最低ライン
+- **フレームワーク**：Next.js 前提
+- **Next.js**：バージョン下限は指定しない（Preview 期間は最新安定を推奨）
+
+### 3) Distribution（Preview）
+
+- **monorepo のまま運用**（パッケージ公開は Preview 後）
+- **wasm 配布**
+  - CSR: `/wasm/<file>.wasm` に固定（`public/wasm`）
+  - SSR: `<laplogos_web>/public/wasm/<file>.wasm` をデフォルト
+  - `LAPLOGOS_WASM_PATH` で上書き可能
+
+### 4) Security Defaults（Capability / fetch）
+
+- `allowed_actions` は **最小セットのみ許可**（必要な action のみ列挙）
+- `allowed_hosts` は **デフォルト空（deny）**
+- fetch の追加制約（Preview デフォルト）
+
+  - method: **GET のみ**
+  - credentials: **omit 固定**
+  - headers: **追加禁止（固定）**
+  - timeout: **10s**
+  - response: **JSON のみ**（`Content-Type: application/json` 必須）
+  - max JSON: **1MiB**
+  - host は `allowed_hosts` に一致しない場合は必ず Drop（**最終 URL も検査**）
+
+### 5) Observability / Error UX（Preview）
+
+- ログ出力は 3 層で統一する
+
+  1. **Debug View**：State / Action Log / Error Log（常時確認）
+  2. **console**：開発者向け詳細
+  3. **Copy（再現パッケージ）**：Issue 報告用にワンクリックでコピー可能
+
+- Error View は **最小 UI**で良い（詳細は Debug View に集約）
+- 再現パッケージ（最低限含める）
+
+  - schema v / runtime version / page identifier / userAgent
+  - input_page（正規化前） + normalized_page（正規化後）
+  - state
+  - action_log（最新 200 件 or 64KB）
+
+### 6) Performance Guardrails（Preview）
+
+- DoS/暴走防止のため、**core で上限を強制**
+
+  - max nodes: **5000**
+  - loop expand: **200**
+  - patch/dispatch: **2000**
+  - dispatch/sec: **30**
+
+- 計測の出留め
+
+  - Debug View に perf（normalize/materialize/diff/patch/hydrate）を表示
+  - console は詳細（必要時）
+
+### 7) Deployment（Preview） & CI Scope
+
+- Preview のデプロイ方式は **Node SSR 1 本に固定**
+- CI は **GitHub Actions 新規追加**で OK
+- E2E は **Playwright** で OK（主要動線のみ）
+- Node 側テストは **node:test（追加依存なし）**で OK
+
+### 8) Documentation（Preview）
+
+- ドキュメント言語：**日本語のみ**
+- 配置：README は入口、詳細は `/docs` 配下
+- Preview サンプル（最小セット）
+
+  - Counter（set/inc）
+  - Form（Inp + Focus Guard）
+  - List（Primitive loop + reorder）
+  - Router（nav）
+  - Fetch（allowed_hosts 前提 + loading）
 
 ---
 
-## 🤖 Stage 4: AI-Native Evolution
+## Phase 13: 互換性ポリシー & リリース形態の確定（Preview 向け）
 
-- Phase 15: Streaming UI
-- Phase 16: Self-Healing / A/B Testing
+**目的:** 公開後に「破壊的変更で詰む」事故を避け、Preview としての約束事を固定する。
+
+- [x] **Schema 互換性ポリシー策定**
+
+  - 破壊的変更の定義（必須フィールド追加/意味変更/ID 制約変更 等）
+  - `schema v` 不一致時の挙動（拒否・Error View・ログ出力）を仕様として明記
+
+- [x] **SemVer 運用方針（Preview 版）を明記**
+
+  - `laplogos_core` / `laplogos_web` のバージョン付けルール
+  - 互換性の保証範囲（Preview では「破壊的変更あり得る」を明示するか等）
+
+- [x] **サポート対象環境の固定**
+
+  - Node バージョン（SSR/テスト/CI で統一）
+  - 対象ブラウザ（最低ライン）
+
+- [x] **配布形態の決定**
+
+  - 配布単位（monorepo のまま / package 化 / wasm 配布方法）
+  - “Preview の利用方法” を 1 パターンに固定（README に反映）
+
+**Done 条件:** 「互換性」「バージョン」「動作環境」「配布形態」が文章で固定され、変更判断基準がブレない。
+
+---
+
+## Phase 14: セキュリティ最終仕上げ（Preview 必須）
+
+**目的:** “AI 生成データを実行する” 以上、公開前に最低限の守りを固める。
+
+- [x] **脅威モデル（簡易）を作成**
+
+  - 入力点：Schema(JSON)、State、Fetch(URL)、SSR 埋め込み、Router(page)
+  - 主要リスク：XSS、任意通信、DoS（巨大ツリー/無限更新）、情報漏えい
+
+- [x] **入力バリデーションの再点検（仕様化）**
+
+  - Global ID Constraint（許可文字種）の適用範囲が全経路で保証されていること
+  - Unknown/Invalid Action の Drop ＋ログ（Debug View 含む）方針の固定
+
+- [x] **Capability 運用のデフォルト方針を固定**
+
+  - `allowed_actions` / `allowed_hosts` のデフォルト（基本 deny）
+  - Fetch 時の追加制約（必要なら：method/headers/credentials 等の扱いを明記）
+
+- [x] **SSR まわりのセキュリティ仕様の固定**
+
+  - JSON 埋め込みのエスケープ方針（どの文字をどう扱うか）
+  - Hydration 失敗時フォールバックの挙動を仕様として明記
+
+- [x] **依存関係・サプライチェーンの最低限チェック方針**
+
+  - Rust / Node の依存をどう点検するか（頻度・CI に入れる/入れない）
+
+**Done 条件:** 「何を守っているか／守れないか」が明文化され、Preview 公開に必要な最低限の安全柵が揃う。
+
+---
+
+## Phase 15: 観測性 & デバッグ体験の運用レベル化
+
+**目的:** 公開後に「壊れた・真っ白」を最短で原因特定できるようにする。
+
+- [x] **ログ設計の確定**
+
+  - warn/error の基準、Action/Schema/Render/Patch のログ粒度
+  - Debug View に出す情報（Action Log / State / Schema Tree / Error Log）の確定
+
+- [x] **エラー表示（Error View）方針の確定**
+
+  - Schema 不正、patch 適用失敗、hydration 失敗、fetch 失敗 それぞれの見せ方
+
+- [x] **バグ報告に必要な“再現パッケージ”方針**
+
+  - 最低限：page 識別子、schema v、runtime version、入力 JSON、State、直近 Action ログ
+  - 収集手段（UI でコピーできる/ログに出る/ファイルで落とせる等）を決める
+
+- [x] **SSR/CSR の差分調査を容易にする情報表示**
+
+  - どの経路（SSR 生成/CSR hydrate/CSR 更新）で表示されたかが分かるようにする
+
+**Done 条件:** 事故が起きたときに「情報が足りなくて詰む」を回避できる。
+
+---
+
+## Phase 16: パフォーマンス & 制約（Preview の現実ライン確定）
+
+**目的:** “動く” ではなく “使える” を担保し、Preview の上限を宣言できる状態にする。
+
+- [x] **ベンチ・負荷シナリオの定義（Preview 用）**
+
+  - 大きいツリー、長いリスト、頻繁な State 更新、入力中更新、並び替え
+
+- [x] **計測ポイントの確定**
+
+  - normalize/materialize/diff/patch apply/hydration の時間を追える状態にする
+
+- [x] **性能ボトルネックの一次改善**
+
+  - “明らかに重い/不安定” を潰す（フォーカス、reorder、連続 dispatch など）
+
+- [x] **Preview 制約の明文化**
+
+  - 例：最大ノード数、ループの最大要素数、許容更新頻度、禁止パターン
+  - DoS 的入力（巨大 JSON 等）の扱い（拒否/制限/警告）を決める
+
+**Done 条件:** Preview としての性能と上限が説明でき、極端入力で破綻しない。
+
+---
+
+## Phase 17: 配布・デプロイの標準化（再現可能なリリース手順）
+
+**目的:** 誰がやっても同じ手順で動き、CI/本番で差異が出ないようにする。
+
+- [x] **ビルド成果物と手順の固定**
+
+  - wasm 生成、web ビルド、SSR での wasm 初期化、CSR での配信経路の標準化
+
+- [x] **環境差分（local/CI/prod）前提の固定**
+
+  - Node runtime 前提の明記（SSR）
+  - ファイルパス/アセット配信の前提（デプロイ先でズレない設計にする）
+
+- [x] **CI 上での再現性担保**
+
+  - ビルド → テスト（Phase12）までを CI で一貫実行できる状態
+  - 生成物の扱い（キャッシュ/成果物保存の方針）を決める
+
+- [x] **Preview 用デプロイの“1 つの正解”を決める**
+
+  - 実行方法（例：Node SSR で動かす）を一本化
+  - 既知の制約（edge 不可等）があれば明記
+
+**Done 条件:** “Preview を配布・起動する手順” が固定され、壊れたら CI で再現できる。
+
+---
+
+## Phase 18: ドキュメント & サンプル（Preview 公開に必要な最低ライン）
+
+**目的:** 第三者（または未来の自分）が迷わず触れ、制約も理解できる状態にする。
+
+- [x] **README（Getting Started）**
+
+  - セットアップ、起動、最小サンプルの動かし方、よくある詰まり
+
+- [x] **Schema v1 仕様書（短縮キー含む）**
+
+  - Node 種別、props、if/for、ID 制約、ActionSpec（set/inc/fetch）、禁止事項（式禁止等）
+
+- [x] **セキュリティ/Capability の説明**
+
+  - allowed_actions/allowed_hosts の思想、デフォルト、運用例
+
+- [x] **SSR/CSR/Hydration の挙動説明**
+
+  - フロー図レベルで OK（SSR 生成 →hydrate→ 更新、失敗時フォールバック）
+
+- [x] **サンプルページ/サンプル JSON**
+
+  - 最小 UI、フォーム入力、ループ、ルーティング、fetch（許可リスト前提）
+
+- [x] **Preview としての制約・既知の非対応**
+
+  - Phase16 で定義した上限、非対応機能、破壊的変更の可能性の明記
+
+**Done 条件:** Preview 公開時に「使い方」「制約」「安全に触る方法」が一式揃う。
+
+---

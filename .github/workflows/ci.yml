@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Core tests
+        run: cargo test
+        working-directory: laplogos_core
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.9"
+          cache: "npm"
+          cache-dependency-path: laplogos_web/package-lock.json
+      - name: Version check
+        run: node scripts/check-version.mjs
+      - name: Install
+        run: npm ci
+        working-directory: laplogos_web
+      - name: Lint
+        run: npm run lint
+        working-directory: laplogos_web
