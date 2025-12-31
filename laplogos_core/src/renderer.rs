@@ -245,7 +245,7 @@ pub fn apply_patches(
     engine: &LaplogosEngine,
     _container_id: &str,
     patches: &[Patch],
-    _new_root: &LaplogosNode,
+    new_root: &LaplogosNode,
 ) -> Result<(), JsValue> {
     if patches.is_empty() {
         return Ok(());
@@ -304,6 +304,10 @@ pub fn apply_patches(
         }
     }
 
+    if let Ok(root) = find_by_id(&document, &new_root.i) {
+        root.set_attribute("data-laplogos-root", "1")?;
+    }
+
     Ok(())
 }
 
@@ -315,6 +319,10 @@ fn find_by_id(document: &Document, id: &str) -> Result<Element, JsValue> {
 }
 
 pub fn render_to_string(node: &LaplogosNode) -> String {
+    render_to_string_inner(node, true)
+}
+
+fn render_to_string_inner(node: &LaplogosNode, is_root: bool) -> String {
     let tag = match node.t.as_str() {
         "Box" => "div",
         "Txt" => "p",
@@ -324,10 +332,10 @@ pub fn render_to_string(node: &LaplogosNode) -> String {
         _ => "div",
     };
 
-    let mut attrs = vec![format!(
-        "data-laplogos-id=\"{}\"",
-        escape_attr(&node.i)
-    )];
+    let mut attrs = vec![format!("data-laplogos-id=\"{}\"", escape_attr(&node.i))];
+    if is_root {
+        attrs.push("data-laplogos-root=\"1\"".to_string());
+    }
 
     match node.t.as_str() {
         "Inp" => {
@@ -378,7 +386,7 @@ pub fn render_to_string(node: &LaplogosNode) -> String {
 
     if let Some(children) = node.c.as_ref() {
         for child in children {
-            inner.push_str(&render_to_string(child));
+            inner.push_str(&render_to_string_inner(child, false));
         }
     }
 

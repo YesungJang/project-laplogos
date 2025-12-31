@@ -259,7 +259,6 @@ impl LaplogosEngine {
         let mut inner = self.inner.borrow_mut();
         inner.input_page = Some(raw_clone);
         inner.normalized_page = page;
-        inner.last_materialized = None;
         inner.metrics.normalize_ms = Some(normalize_ms);
 
         if v_missing {

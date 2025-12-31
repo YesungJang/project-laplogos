@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from "react";
+import { memo, useMemo, useRef } from "react";
 import { DebugView } from "./DebugView";
 import { ErrorView } from "./ErrorView";
 import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
@@ -13,7 +13,23 @@ type Props = {
 
 const containerId = "laplogos-root";
 
+const LaplogosContainer = memo(
+  function LaplogosContainer({ html }: { html: string }) {
+    return (
+      <div
+        id={containerId}
+        className="min-h-[200px] rounded-md border border-slate-200 bg-slate-50 p-3"
+        dangerouslySetInnerHTML={{ __html: html }}
+        suppressHydrationWarning
+      />
+    );
+  },
+  () => true
+);
+
 export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props) {
+  const renderedHtmlRef = useRef(renderedHtml);
+  const bootstrapJsonRef = useRef(bootstrapJson);
   const { engine, dispatch, refreshTrigger, error, renderSource } = useLaplogosEngine(
     initialJson,
     containerId
@@ -26,6 +42,7 @@ export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props)
     },
     [dispatch]
   );
+  const isReady = !!engine && !error;
 
   return (
     <main className="min-h-screen bg-slate-50 p-8 text-slate-900">
@@ -45,12 +62,15 @@ export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props)
           {error ? (
             <ErrorView message={error} />
           ) : (
-            <div
-              id={containerId}
-              className="min-h-[200px] rounded-md border border-slate-200 bg-slate-50 p-3"
-              dangerouslySetInnerHTML={{ __html: renderedHtml }}
-              suppressHydrationWarning
-            />
+            <div className="relative">
+              <LaplogosContainer html={renderedHtmlRef.current} />
+              {!isReady && (
+                <div
+                  className="absolute inset-0 z-10 rounded-md bg-white/60 backdrop-blur-[1px]"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
           )}
         </section>
         <DebugView
@@ -62,7 +82,7 @@ export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props)
       <script
         id="laplogos-bootstrap"
         type="application/json"
-        dangerouslySetInnerHTML={{ __html: bootstrapJson }}
+        dangerouslySetInnerHTML={{ __html: bootstrapJsonRef.current }}
       />
     </main>
   );

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { normalizePagePath } from "../lib/laplogos-path";
-import { loadClientConfig } from "../lib/laplogos-config";
+import { envClientConfig, loadClientConfig } from "../lib/laplogos-config";
 
 type EngineModule = typeof import("laplogos_core");
 type Engine = InstanceType<EngineModule["LaplogosEngine"]> & {
@@ -58,9 +58,19 @@ async function fetchPageJson(pathname: string, fallbackJson: string) {
     const res = await fetch(`/api/laplogos?page=${encodeURIComponent(pagePath)}`, {
       headers: { Accept: "application/json" },
     });
-    if (!res.ok) return fallbackJson;
+    if (!res.ok) return fallbackPageJson(pagePath, fallbackJson);
     const data = await res.json();
     return JSON.stringify(data);
+  } catch {
+    return fallbackPageJson(normalizePagePath(pathname), fallbackJson);
+  }
+}
+
+async function fallbackPageJson(pathname: string, fallbackJson: string) {
+  if (process.env.NODE_ENV === "production") return fallbackJson;
+  try {
+    const mod = await import("../app/laplogos-schema");
+    return JSON.stringify(mod.getPageSchema(pathname));
   } catch {
     return fallbackJson;
   }
@@ -89,8 +99,33 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [renderSource, setRenderSource] = useState<string>("CSR");
-  const router = useRouter();
   const pathname = usePathname();
+  const [currentPath, setCurrentPath] = useState(() => {
+    if (typeof window === "undefined") return pathname;
+    return window.location.pathname;
+  });
+  const initialJsonRef = useRef(initialJson);
+  const fallbackJsonRef = useRef(initialJson);
+  const engineRef = useRef<Engine | null>(null);
+  const skipNextUpdateRef = useRef(false);
+
+  useEffect(() => {
+    fallbackJsonRef.current = initialJson;
+  }, [initialJson]);
+
+  useEffect(() => {
+    engineRef.current = engine;
+  }, [engine]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
 
   const setErrorFrom = useCallback((err: unknown, fallback: string) => {
     if (err instanceof Error) {
@@ -104,24 +139,53 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
     setError(fallback);
   }, []);
 
+  const updatePage = useCallback(
+    async (path: string) => {
+      const currentEngine = engineRef.current;
+      if (!currentEngine || error) return;
+      try {
+        const pageJson = await fetchPageJson(path, fallbackJsonRef.current);
+        currentEngine.set_page_json(pageJson);
+        await currentEngine.rerender(containerId);
+        setRenderSource("CSR Update");
+        setRefreshTrigger((v) => v + 1);
+      } catch (err) {
+        console.error("Failed to update page", err);
+        setErrorFrom(err, "Failed to update page");
+      }
+    },
+    [containerId, error, setErrorFrom]
+  );
+
   const onNav = useCallback(
     (to: string) => {
       if (isExternalUrl(to)) {
         window.location.assign(to);
         return;
       }
-      router.push(to);
+      try {
+        const nextUrl = new URL(to, window.location.origin);
+        skipNextUpdateRef.current = true;
+        void (async () => {
+          await updatePage(nextUrl.pathname);
+          window.history.pushState({}, "", nextUrl);
+          setCurrentPath(nextUrl.pathname);
+        })();
+      } catch {
+        window.location.assign(to);
+      }
     },
-    [router]
+    [updatePage]
   );
 
   useEffect(() => {
+    if (engine) return;
     let active = true;
 
     const load = async () => {
       try {
         const bootstrap = readBootstrap();
-        const pageJson = bootstrap?.pageJson ?? initialJson;
+        const pageJson = bootstrap?.pageJson ?? initialJsonRef.current;
         const stateJson = bootstrap?.stateJson ?? "{}";
         const mod = await import("laplogos_core");
         if (!active) return;
@@ -132,9 +196,10 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         mod.init_panic_hook();
         const inst = new mod.LaplogosEngine(pageJson);
         if (!active) return;
+        engineRef.current = inst;
         const bootstrapConfig =
           bootstrap?.config && typeof bootstrap.config === "object" ? bootstrap.config : null;
-        const config = bootstrapConfig ?? (await loadClientConfig());
+        const config = bootstrapConfig ?? envClientConfig();
         inst.init(JSON.stringify(config));
         inst.set_on_nav(onNav);
         inst.set_state_json(stateJson);
@@ -150,6 +215,14 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
         }
         setEngine(inst);
         setRefreshTrigger((v) => v + 1);
+        if (!bootstrapConfig) {
+          loadClientConfig()
+            .then((fileConfig) => {
+              if (!active) return;
+              inst.init(JSON.stringify(fileConfig));
+            })
+            .catch(() => {});
+        }
       } catch (err) {
         console.error("Failed to load laplogos engine", err);
         if (!active) return;
@@ -162,7 +235,7 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
     return () => {
       active = false;
     };
-  }, [initialJson, containerId, onNav, setErrorFrom]);
+  }, [containerId, onNav, setErrorFrom, engine]);
 
   useEffect(() => {
     if (!engine || error) return;
@@ -170,12 +243,11 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
 
     const update = async () => {
       try {
-        const pageJson = await fetchPageJson(pathname, initialJson);
-        if (!active) return;
-        engine.set_page_json(pageJson);
-        await engine.rerender(containerId);
-        setRenderSource("CSR Update");
-        setRefreshTrigger((v) => v + 1);
+        if (skipNextUpdateRef.current) {
+          skipNextUpdateRef.current = false;
+          return;
+        }
+        await updatePage(currentPath);
       } catch (err) {
         console.error("Failed to update page", err);
         if (!active) return;
@@ -188,7 +260,7 @@ export function useLaplogosEngine(initialJson: string, containerId: string): Use
     return () => {
       active = false;
     };
-  }, [engine, pathname, initialJson, containerId, error, setErrorFrom]);
+  }, [engine, currentPath, error, setErrorFrom, updatePage]);
 
   const dispatch = useCallback(
     async (actionJson: string) => {

@@ -8,12 +8,17 @@ export const runtime = "nodejs";
 
 const initialState = {};
 
+type Params = {
+  path?: string[];
+};
+
 type Props = {
-  params: { path?: string[] };
+  params: Promise<Params> | Params;
 };
 
 export default async function LaplogosDynamicPage({ params }: Props) {
-  const rawPath = params.path?.join("/") ?? "/";
+  const { path } = await params;
+  const rawPath = path?.join("/") ?? "/";
   const pagePath = normalizePagePath(rawPath);
   const initialPage = getPageSchema(pagePath);
   const renderedHtml = await renderLaplogosHtml(initialPage, initialState);
