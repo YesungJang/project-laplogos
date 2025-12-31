@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo, useRef } from "react";
+import { memo, useMemo, useState } from "react";
 import { DebugView } from "./DebugView";
 import { ErrorView } from "./ErrorView";
 import { useLaplogosEngine } from "../hooks/useLaplogosEngine";
@@ -28,8 +28,8 @@ const LaplogosContainer = memo(
 );
 
 export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props) {
-  const renderedHtmlRef = useRef(renderedHtml);
-  const bootstrapJsonRef = useRef(bootstrapJson);
+  const [initialRenderedHtml] = useState(renderedHtml);
+  const [initialBootstrapJson] = useState(bootstrapJson);
   const { engine, dispatch, refreshTrigger, error, renderSource } = useLaplogosEngine(
     initialJson,
     containerId
@@ -63,7 +63,7 @@ export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props)
             <ErrorView message={error} />
           ) : (
             <div className="relative">
-              <LaplogosContainer html={renderedHtmlRef.current} />
+              <LaplogosContainer html={initialRenderedHtml} />
               {!isReady && (
                 <div
                   className="absolute inset-0 z-10 rounded-md bg-white/60 backdrop-blur-[1px]"
@@ -82,7 +82,7 @@ export function LaplogosApp({ initialJson, bootstrapJson, renderedHtml }: Props)
       <script
         id="laplogos-bootstrap"
         type="application/json"
-        dangerouslySetInnerHTML={{ __html: bootstrapJsonRef.current }}
+        dangerouslySetInnerHTML={{ __html: initialBootstrapJson }}
       />
     </main>
   );

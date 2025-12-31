@@ -64,6 +64,15 @@ npm run start
   - `NEXT_PUBLIC_LAPLOGOS_ALLOWED_HOSTS`
 - SSR 参照の設定パスは `LAPLOGOS_CONFIG_PATH` で上書き可能
 
+## テスト
+
+- Web:
+  - `npm run lint`
+  - `npm run test:node`
+  - `npm run test:e2e`（Playwright。必要なら `npx playwright install chromium`）
+- Core:
+  - `cargo test -p laplogos_core`
+
 ## ドキュメント
 
 - 互換性/Versioning: `docs/preview/compatibility.md`
