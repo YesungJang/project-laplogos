@@ -19,6 +19,6 @@ fn deterministic_render_snapshot() {
 
     assert_eq!(
         html,
-        "<div data-laplogos-id=\"root\"><p data-laplogos-id=\"t1\">5</p></div>"
+        "<div data-laplogos-id=\"root\" data-laplogos-root=\"1\"><p data-laplogos-id=\"t1\">5</p></div>"
     );
 }
