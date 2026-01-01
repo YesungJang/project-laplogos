@@ -8,8 +8,102 @@ fn text_from_value(val: &serde_json::Value) -> String {
 }
 
 fn is_disallowed_href(href: &str) -> bool {
-    let lower = href.trim().to_ascii_lowercase();
-    lower.starts_with("javascript:") || lower.starts_with("data:")
+    let trimmed = href.trim();
+    if trimmed.starts_with("//") {
+        return true;
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.starts_with("javascript:") || lower.starts_with("data:") {
+        return true;
+    }
+    if has_url_scheme(&lower) && !(lower.starts_with("http://") || lower.starts_with("https://")) {
+        return true;
+    }
+    false
+}
+
+fn has_url_scheme(input: &str) -> bool {
+    let mut chars = input.chars();
+    let first = match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() => c,
+        _ => return false,
+    };
+    let _ = first;
+    for c in chars {
+        if c == ':' {
+            return true;
+        }
+        if c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.' {
+            continue;
+        }
+        break;
+    }
+    false
+}
+
+fn is_disallowed_prop_name(key: &str) -> bool {
+    let lower = key.trim().to_ascii_lowercase();
+    if lower == "data-laplogos-id" || lower == "data-laplogos-root" {
+        return true;
+    }
+    lower.starts_with("on")
+}
+
+fn is_safe_prop_name(key: &str) -> bool {
+    if key.is_empty() {
+        return false;
+    }
+    let mut chars = key.chars();
+    let first = match chars.next() {
+        Some(c) => c,
+        None => return false,
+    };
+    if !(first.is_ascii_alphabetic() || first == '_' || first == ':') {
+        return false;
+    }
+    for c in chars {
+        if !(c.is_ascii_alphanumeric() || c == '_' || c == ':' || c == '-' || c == '.') {
+            return false;
+        }
+    }
+    true
+}
+
+fn is_reserved_prop(node_type: &str, key: &str) -> bool {
+    matches!(
+        (node_type, key),
+        ("Txt", "val")
+            | ("Btn", "label")
+            | ("Inp", "val")
+            | ("Lnk", "label")
+            | ("Lnk", "href")
+    )
+}
+
+fn apply_props(
+    element: &Element,
+    node: &LaplogosNode,
+    engine: Option<&LaplogosEngine>,
+) -> Result<(), JsValue> {
+    for (key, val) in &node.p {
+        if is_reserved_prop(node.t.as_str(), key) {
+            continue;
+        }
+        if is_disallowed_prop_name(key) {
+            if let Some(engine) = engine {
+                engine.log_warn("prop attribute is not allowed");
+            }
+            continue;
+        }
+        if !is_safe_prop_name(key) {
+            if let Some(engine) = engine {
+                engine.log_warn("prop attribute name is invalid");
+            }
+            continue;
+        }
+        element.set_attribute(key, &text_from_value(val))?;
+    }
+    Ok(())
 }
 
 pub fn render_node(
@@ -77,6 +171,8 @@ pub fn render_node(
         }
         _ => {}
     }
+
+    apply_props(&element, node, engine)?;
 
     if let Some(engine) = engine {
         if let Some(on) = node.on.as_ref() {
@@ -277,6 +373,18 @@ pub fn apply_patches(
                 target.set_text_content(Some(val));
             }
             Patch::UpdateAttr { id, key, val } => {
+                if is_disallowed_prop_name(key) {
+                    engine.log_warn("prop attribute is not allowed");
+                    continue;
+                }
+                if !is_safe_prop_name(key) {
+                    engine.log_warn("prop attribute name is invalid");
+                    continue;
+                }
+                if key == "href" && is_disallowed_href(val) {
+                    engine.log_warn("Lnk.p.href is not allowed");
+                    continue;
+                }
                 let target = find_by_id(&document, id)?;
                 if key == "value" {
                     if let Some(active) = document.active_element() {
@@ -288,6 +396,14 @@ pub fn apply_patches(
                 target.set_attribute(key, val)?;
             }
             Patch::RemoveAttr { id, key } => {
+                if is_disallowed_prop_name(key) {
+                    engine.log_warn("prop attribute is not allowed");
+                    continue;
+                }
+                if !is_safe_prop_name(key) {
+                    engine.log_warn("prop attribute name is invalid");
+                    continue;
+                }
                 let target = find_by_id(&document, id)?;
                 target.remove_attribute(key)?;
             }
@@ -352,6 +468,24 @@ fn render_to_string_inner(node: &LaplogosNode, is_root: bool) -> String {
             }
         }
         _ => {}
+    }
+
+    let mut prop_keys: Vec<&String> = node.p.keys().collect();
+    prop_keys.sort();
+    for key in prop_keys {
+        if is_reserved_prop(node.t.as_str(), key) || is_disallowed_prop_name(key) {
+            continue;
+        }
+        if !is_safe_prop_name(key) {
+            continue;
+        }
+        if let Some(val) = node.p.get(key) {
+            attrs.push(format!(
+                "{}=\"{}\"",
+                key,
+                escape_attr(&text_from_value(val))
+            ));
+        }
     }
 
     let attr_text = if attrs.is_empty() {

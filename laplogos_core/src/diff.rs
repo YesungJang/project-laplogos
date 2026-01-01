@@ -2,6 +2,34 @@ use std::collections::HashMap;
 
 use crate::LaplogosNode;
 
+fn is_disallowed_prop_name(key: &str) -> bool {
+    let lower = key.trim().to_ascii_lowercase();
+    if lower == "data-laplogos-id" || lower == "data-laplogos-root" {
+        return true;
+    }
+    lower.starts_with("on")
+}
+
+fn is_safe_prop_name(key: &str) -> bool {
+    if key.is_empty() {
+        return false;
+    }
+    let mut chars = key.chars();
+    let first = match chars.next() {
+        Some(c) => c,
+        None => return false,
+    };
+    if !(first.is_ascii_alphabetic() || first == '_' || first == ':') {
+        return false;
+    }
+    for c in chars {
+        if !(c.is_ascii_alphanumeric() || c == '_' || c == ':' || c == '-' || c == '.') {
+            return false;
+        }
+    }
+    true
+}
+
 #[derive(Debug, Clone)]
 pub enum Patch {
     Append { parent_id: String, node: LaplogosNode },
@@ -32,6 +60,26 @@ pub fn diff(old: &LaplogosNode, new: &LaplogosNode) -> Vec<Patch> {
         return patches;
     }
 
+    if old.t == "Lnk" {
+        let old_href = old.p.get("href");
+        let new_href = new.p.get("href");
+        if old_href != new_href {
+            patches.push(Patch::Replace {
+                id: old.i.clone(),
+                node: new.clone(),
+            });
+            return patches;
+        }
+    }
+
+    if old.t == "Inp" && old.bind_key != new.bind_key {
+        patches.push(Patch::Replace {
+            id: old.i.clone(),
+            node: new.clone(),
+        });
+        return patches;
+    }
+
     diff_props(old, new, &mut patches);
     diff_children(old, new, &mut patches);
 
@@ -42,6 +90,9 @@ fn diff_props(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) 
     let mut new_keys: Vec<&String> = new.p.keys().collect();
     new_keys.sort();
     for key in new_keys {
+        if is_disallowed_prop_name(key) || !is_safe_prop_name(key) {
+            continue;
+        }
         let new_val = new.p.get(key).expect("key from map");
         let old_val = old.p.get(key);
         if old_val == Some(new_val) {
@@ -77,6 +128,9 @@ fn diff_props(old: &LaplogosNode, new: &LaplogosNode, patches: &mut Vec<Patch>) 
     let mut old_keys: Vec<&String> = old.p.keys().collect();
     old_keys.sort();
     for key in old_keys {
+        if is_disallowed_prop_name(key) || !is_safe_prop_name(key) {
+            continue;
+        }
         if new.p.contains_key(key) {
             continue;
         }

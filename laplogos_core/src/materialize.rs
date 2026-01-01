@@ -302,8 +302,21 @@ fn apply_text(node: &mut LaplogosNode, state: &LaplogosState, scope: &Materializ
         "Inp" => {
             if let Some(val) = node.p.get("val") {
                 if let Some(raw) = val.as_str() {
-                    if raw.starts_with('$') && raw.len() > 1 {
-                        let key = raw.trim_start_matches('$').to_string();
+                    let mut bind_key = None;
+                    if raw == "$item" {
+                        if let Some(item) = scope.item.as_ref() {
+                            bind_key = Some(item.clone());
+                        }
+                    }
+                    if bind_key.is_none() && raw == "$key" {
+                        if let Some(key) = scope.key.as_ref() {
+                            bind_key = Some(key.clone());
+                        }
+                    }
+                    if bind_key.is_none() && raw.starts_with('$') && raw.len() > 1 {
+                        bind_key = Some(raw.trim_start_matches('$').to_string());
+                    }
+                    if let Some(key) = bind_key {
                         node.bind_key = Some(key.clone());
                         let resolved = state
                             .data

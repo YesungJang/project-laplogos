@@ -26,6 +26,19 @@ fn txt_node(id: &str, val: &str) -> LaplogosNode {
     node
 }
 
+fn lnk_node(id: &str, href: &str) -> LaplogosNode {
+    let mut node = base_node(id, "Lnk");
+    node.p
+        .insert("href".to_string(), Value::String(href.to_string()));
+    node
+}
+
+fn inp_node(id: &str, bind_key: &str) -> LaplogosNode {
+    let mut node = base_node(id, "Inp");
+    node.bind_key = Some(bind_key.to_string());
+    node
+}
+
 #[test]
 fn diff_updates_text_value() {
     let old = txt_node("t1", "a");
@@ -131,6 +144,38 @@ fn diff_reorders_with_inserted_children() {
                     "c".to_string()
                 ]
             );
+        }
+        other => panic!("unexpected patch: {:?}", other),
+    }
+}
+
+#[test]
+fn diff_replaces_link_when_href_changes() {
+    let old = lnk_node("link", "/a");
+    let new = lnk_node("link", "/b");
+
+    let patches = diff(&old, &new);
+    assert_eq!(patches.len(), 1);
+    match &patches[0] {
+        Patch::Replace { id, node } => {
+            assert_eq!(id, "link");
+            assert_eq!(node.t, "Lnk");
+        }
+        other => panic!("unexpected patch: {:?}", other),
+    }
+}
+
+#[test]
+fn diff_replaces_input_when_bind_key_changes() {
+    let old = inp_node("field", "a");
+    let new = inp_node("field", "b");
+
+    let patches = diff(&old, &new);
+    assert_eq!(patches.len(), 1);
+    match &patches[0] {
+        Patch::Replace { id, node } => {
+            assert_eq!(id, "field");
+            assert_eq!(node.t, "Inp");
         }
         other => panic!("unexpected patch: {:?}", other),
     }

@@ -751,6 +751,10 @@ impl LaplogosEngine {
     }
 
     fn handle_nav(&self, to: String) {
+        if is_disallowed_nav(&to) || to.trim_start().starts_with("//") {
+            self.log_warn("nav.to is not allowed");
+            return;
+        }
         if is_external_url(&to) {
             let parsed = match web_sys::Url::new(&to) {
                 Ok(url) => url,
@@ -920,8 +924,38 @@ fn parse_state(value: Value) -> Result<LaplogosState, JsValue> {
 }
 
 fn is_external_url(to: &str) -> bool {
-    let lower = to.to_ascii_lowercase();
-    lower.starts_with("http://") || lower.starts_with("https://")
+    let trimmed = to.trim_start();
+    if trimmed.starts_with("//") {
+        return true;
+    }
+    if trimmed.starts_with('/') {
+        return false;
+    }
+    has_url_scheme(trimmed)
+}
+
+fn has_url_scheme(input: &str) -> bool {
+    let mut chars = input.chars();
+    let first = match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() => c,
+        _ => return false,
+    };
+    let _ = first;
+    for c in chars {
+        if c == ':' {
+            return true;
+        }
+        if c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.' {
+            continue;
+        }
+        break;
+    }
+    false
+}
+
+fn is_disallowed_nav(to: &str) -> bool {
+    let lower = to.trim().to_ascii_lowercase();
+    lower.starts_with("javascript:") || lower.starts_with("data:")
 }
 
 #[cfg(test)]

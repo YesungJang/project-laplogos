@@ -21,8 +21,9 @@
 
 - `Txt.p.val`: 表示文字列
 - `Btn.p.label`: ボタン表示
-- `Inp.p.val`: **`$key` 必須**（入力は `set` を発行）
-- `Lnk.p.href` / `Lnk.p.label`
+- `Inp.p.val`: **`$<stateKey>` 必須**（ループ内は `$item` / `$key` を使用可、入力は `set` を発行）
+- `Lnk.p.href` / `Lnk.p.label`（`http(s)` または相対パスのみ許可。`javascript:` / `data:` / `//` / その他スキームは拒否）
+- その他の `p` は HTML 属性として出力（`on*` と内部属性 `data-laplogos-*` は無視、属性名は ASCII の安全な文字のみ許可）
 
 ## ActionSpec
 

@@ -31,7 +31,10 @@ type UseLaplogosEngineResult = {
 };
 
 function isExternalUrl(to: string) {
-  return /^https?:\/\//i.test(to);
+  const trimmed = to.trimStart();
+  if (trimmed.startsWith("//")) return true;
+  if (trimmed.startsWith("/")) return false;
+  return /^[a-z][a-z0-9+.-]*:/i.test(trimmed);
 }
 
 function shouldForceHydrationFail() {

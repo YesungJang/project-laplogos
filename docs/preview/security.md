@@ -22,7 +22,10 @@
 - Global ID Constraint は全レンダリング経路で必須
 - Unknown/Invalid Action は Drop + warn/error log
 - ループ/if 制約は materialize 時に厳格チェック
-- `Lnk.p.href` は `javascript:` / `data:` を拒否
+- `Lnk.p.href` は `javascript:` / `data:` / `//` / 非 `http(s)` を拒否
+- `nav.to` も `javascript:` / `data:` / `//` を拒否
+- `p` の `on*` 属性は無視（任意コード実行を防止）
+- `data-laplogos-*` は内部属性として上書き禁止
 
 ## Capability defaults
 
