@@ -167,3 +167,6 @@
 2026-01-02 03:06 ドネーション実績の例を説明
 2026-01-02 03:07 ドネーション＋スポンサー/サポート計画案を提示
 2026-01-05 01:08 CLI計画書（ドラフト）を作成
+2026-10-05 SSR WASM 初期化失敗は生成 JS と public の旧 WASM の不一致と確認し、既存 prepare-wasm.mjs で同期（--target web と initSync を維持）。
+2026-10-05 Next.js 16 対応として動的ページの params 型を Promise<Params> に限定。依存更新・コミット・push・GitHub 変更なし。
+2026-10-05 検証: cargo test 25件成功、test:node 4件成功、lint/build 終了コード0。build は baseline-browser-mapping の旧データ警告あり。

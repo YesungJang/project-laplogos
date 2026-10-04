@@ -13,7 +13,7 @@ type Params = {
 };
 
 type Props = {
-  params: Promise<Params> | Params;
+  params: Promise<Params>;
 };
 
 export default async function LaplogosDynamicPage({ params }: Props) {
