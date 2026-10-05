@@ -83,3 +83,80 @@ npm run start
 - Schema v1: `docs/schema-v1.md`
 - SSR/CSR/Hydration: `docs/ssr-csr-hydration.md`
 - サンプル: `docs/samples/`
+
+## Development
+
+ローカルで実行できる検証コマンドをまとめます。
+とくに断りがない限り、コマンドはすべて**リポジトリのルート**から実行します。
+
+### 事前準備
+
+Web 側の検証（`test:node` / `lint` / `build` / `test:e2e`）は、
+ビルド済みの wasm パッケージと `laplogos_web` の依存関係に依存します。
+初回、または `laplogos_core/` を変更した後は次を実行してください。
+
+```bash
+cd laplogos_core
+wasm-pack build --target web
+cd ..
+node scripts/prepare-wasm.mjs
+npm --prefix laplogos_web install
+```
+
+- `laplogos_web/package.json` は `laplogos_core` を `file:../laplogos_core/pkg` として参照するため、`wasm-pack build` は `npm install` より先に必要です。
+- `scripts/prepare-wasm.mjs` はルートからの相対パスを解決するので、ルートで実行してください。
+
+`npm run test:e2e` を実行する場合は、Playwright のブラウザも取得します。
+
+```bash
+cd laplogos_web
+npx playwright install chromium
+```
+
+### Core（Rust）
+
+ルートに Cargo ワークスペースはないため、`--manifest-path` でクレートを指定します。
+
+```bash
+cargo test --manifest-path laplogos_core/Cargo.toml
+```
+
+ディレクトリを移動して実行する場合:
+
+```bash
+cd laplogos_core
+cargo test
+```
+
+### Web（Next.js）
+
+`laplogos_web/package.json` に定義されたスクリプトを実行します。
+
+```bash
+npm --prefix laplogos_web run test:node
+npm --prefix laplogos_web run lint
+npm --prefix laplogos_web run build
+npm --prefix laplogos_web run test:e2e
+```
+
+ディレクトリを移動して実行する場合:
+
+```bash
+cd laplogos_web
+npm run test:node
+npm run lint
+npm run build
+npm run test:e2e
+```
+
+### 各コマンドの内容
+
+| コマンド | 実行内容 |
+| --- | --- |
+| `cargo test` | `laplogos_core` のユニット/統合テスト（`laplogos_core/tests/`） |
+| `npm run test:node` | `node --test --import tsx tests/*.test.ts`（SSR/CSR の Node テスト） |
+| `npm run lint` | ESLint（`laplogos_web/eslint.config.mjs`） |
+| `npm run build` | `next build --webpack`（本番ビルド） |
+| `npm run test:e2e` | Playwright（`laplogos_web/e2e/`） |
+
+- `npm run test:e2e` は `playwright.config.ts` の `webServer` 設定により `npm run dev` を自動起動し、`http://localhost:3000` に対してテストします。すでに開発サーバーを起動している場合はそれを再利用します。
