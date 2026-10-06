@@ -1,7 +1,10 @@
 use serde_json::Value;
 use std::collections::HashSet;
 
-use crate::{store::LaplogosState, LaplogosNode};
+use crate::{
+    store::{canonicalize_value, LaplogosState},
+    LaplogosNode,
+};
 
 const MAX_NODES: usize = 5000;
 const MAX_DEPTH: usize = 256;
@@ -256,6 +259,70 @@ pub fn materialize_one_root(
         0 => Err(LaplogosError::new("root if=false is fatal")),
         _ => Err(LaplogosError::new("root must materialize to a single node")),
     }
+}
+
+/// Looks up a node by exact id equality in an already materialized tree.
+///
+/// Only `LaplogosNode.i` is compared, byte for byte: there is no prefix,
+/// pattern or path interpretation. The search is a pre-order walk, and
+/// materialized ids are unique, so at most one node can match.
+pub fn find_node<'a>(root: &'a LaplogosNode, id: &str) -> Option<&'a LaplogosNode> {
+    if root.i == id {
+        return Some(root);
+    }
+    let children = root.c.as_ref()?;
+    for child in children {
+        if let Some(found) = find_node(child, id) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+/// Finds a node in the CURRENT materialized tree and returns a detached,
+/// deterministic snapshot of it.
+///
+/// The tree is materialized from `root` (the normalized page root) and the
+/// current `state` through [`materialize_one_root`], so generated loop ids and
+/// state substitutions are visible while nodes removed by `if` are not.
+/// Materialization warnings stay local to this call.
+///
+/// The returned value contains the node and its whole child subtree in the
+/// existing serde representation, with object keys recursively sorted by
+/// [`canonicalize_value`]. Arrays and child order are preserved. The value is a
+/// deep copy: mutating it cannot affect the page or the state.
+///
+/// Returns an error when `id` is not a valid id, when no node carries that id,
+/// or when materialization itself fails.
+pub fn find_node_snapshot_value(
+    root: &LaplogosNode,
+    state: &LaplogosState,
+    id: &str,
+) -> Result<Value, LaplogosError> {
+    if !is_valid_id(id) {
+        return Err(LaplogosError::new(format!("Invalid id: {}", id)));
+    }
+
+    let mut warnings = Vec::new();
+    let materialized = materialize_one_root(root, state, &mut warnings)?;
+
+    let node = find_node(&materialized, id)
+        .ok_or_else(|| LaplogosError::new(format!("Node not found: {}", id)))?;
+
+    let value = serde_json::to_value(node)
+        .map_err(|e| LaplogosError::new(format!("Failed to serialize node: {e}")))?;
+    Ok(canonicalize_value(&value))
+}
+
+/// Serializes [`find_node_snapshot_value`] to JSON.
+pub fn find_node_snapshot_json(
+    root: &LaplogosNode,
+    state: &LaplogosState,
+    id: &str,
+) -> Result<String, LaplogosError> {
+    let value = find_node_snapshot_value(root, state, id)?;
+    serde_json::to_string(&value)
+        .map_err(|e| LaplogosError::new(format!("Failed to serialize node: {e}")))
 }
 
 fn check_depth_limit(root: &LaplogosNode) -> Result<(), LaplogosError> {
