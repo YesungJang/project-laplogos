@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Core: `LaplogosEngine.get_state` を追加（state データの決定的・読み取り専用スナップショット）
+- Core: `LaplogosEngine.find` を追加（materialized ツリーを ID 完全一致で検索する決定的・読み取り専用スナップショット）
 - Docs: Core 公開 API のドキュメント `docs/core-api.md` を追加
 
 ## v0.1.0 (beta) - 2025-12-31
