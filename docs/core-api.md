@@ -17,6 +17,7 @@ JS からも `engine.get_state()` のように同じ名前で呼び出します�
 | `rerender(container_id)` | `()` | Materialize → Diff → Patch |
 | `hydrate(container_id)` | `()` | SSR 済み DOM にイベントのみ接続 |
 | `get_state()` | `String` | **state データの決定的な読み取り専用スナップショット** |
+| `find(id)` | `String` | **現在の materialized ツリーから ID 完全一致でノードを取得** |
 | `get_state_json()` | `String` | state データをそのままシリアライズ（既存） |
 | `get_page_json()` | `String` | 正規化後の schema |
 | `get_input_page_json()` | `String` | 正規化前の入力 schema |
@@ -49,6 +50,31 @@ const json = engine.get_state();
 `get_state_json()` は従来どおり `state` を直接シリアライズします。含まれるデータは
 `get_state()` と同じですが、キー順は保証されません。既存の呼び出しは変更不要です。
 
+### find
+
+```ts
+const json = engine.find("row:a");
+// => '{"c":[...],"for":null,"i":"row:a","if":null,"o":null,"on":null,"p":{...},"r":null,"st":null,"t":"Box"}'
+```
+
+- 探索対象は **現在の materialized ツリー**（現在の正規化済み schema ＋ 現在の state から
+  その場で materialize したもの）だけです。入力 schema、正規化後の未展開 ID、最後に描画した
+  キャッシュ、props の中身、DOM は検索しません。事前の `rerender()` / `hydrate()` は不要です。
+- 照合は materialized な `LaplogosNode.i` との **完全一致のみ**です。前方一致・部分一致・
+  セレクタ・グロブ・パス解釈・別名は一切行いません。ループは展開後の ID
+  （`row:a` や配下の `row:a:label`）で指定し、`if` が false のノードは存在しません。
+- 戻り値は該当ノードと **その子サブツリー** を含む JSON オブジェクトの文字列です（既存の
+  serde 表現）。`get_state()` と同じ正規化を使うため、オブジェクトのキーは再帰的に昇順へ
+  ソートされ、配列と子の順序は保持されます。同じ schema ＋ state に対する出力は常に同一です。
+- **読み取り専用**: 成功時も失敗時も、state / schema / キャッシュ / ログ / metrics を一切変更
+  せず、DOM・描画・通信・イベント・コールバック・dispatch も発生しません。materialize 時の
+  警告はこの呼び出し内に閉じます。返るのはディープコピーです。
+- 次の場合はエラーになります。別のノードを返したり ID を捏造したりはしません。
+  - `id` が既存の ID 制約（`[A-Za-z0-9_:-]+`）を満たさない
+  - その ID のノードが現在の materialized ツリーに存在しない
+  - materialize 自体が失敗する（ガードレール超過 / ID 重複 / root の `if=false` など）。
+    既存のエラーメッセージがそのまま伝播します。
+
 ## モジュール関数
 
 - `init_panic_hook()`: panic を console へ出力
@@ -70,3 +96,14 @@ let json = state.snapshot_json();   // String（get_state と同じ出力）
 ```
 
 `LaplogosEngine::get_state()` は `LaplogosState::snapshot_json()` の薄いラッパーです。
+
+ノード検索も同様に `LaplogosEngine` を介さずに利用できます。
+
+```rust
+use laplogos_core::materialize::{find_node_snapshot_json, find_node_snapshot_value};
+
+let value = find_node_snapshot_value(&page.root, &state, "root")?; // serde_json::Value
+let json = find_node_snapshot_json(&page.root, &state, "root")?;   // String（find と同じ出力）
+```
+
+`LaplogosEngine::find()` は `materialize::find_node_snapshot_json()` の薄いラッパーです。

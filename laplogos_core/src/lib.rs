@@ -21,7 +21,7 @@ use store::{
     apply_action, canonicalize_value, normalize_action, validate_action, LaplogosConfig,
     ValidatedAction,
 };
-use crate::materialize::{materialize_one_root, LaplogosError};
+use crate::materialize::{find_node_snapshot_json, materialize_one_root, LaplogosError};
 
 const SCHEMA_VERSION_DEFAULT: u8 = 1;
 const MAX_ACTION_LOG_COUNT: usize = 200;
@@ -194,6 +194,18 @@ impl LaplogosEngine {
     pub fn get_state(&self) -> String {
         let inner = self.inner.borrow();
         inner.state.snapshot_json()
+    }
+
+    /// Returns a deterministic, read-only snapshot of the node whose
+    /// materialized id equals `id`.
+    ///
+    /// The lookup runs against the current materialized tree (current
+    /// normalized page + current state) and never touches state, logs,
+    /// metrics, caches or the DOM. A missing or invalid id is an error.
+    pub fn find(&self, id: &str) -> Result<String, JsValue> {
+        let inner = self.inner.borrow();
+        find_node_snapshot_json(&inner.normalized_page.root, &inner.state, id)
+            .map_err(|err| JsValue::from_str(&err.message))
     }
 
     pub fn get_action_log_json(&self) -> String {
