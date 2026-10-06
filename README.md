@@ -80,6 +80,7 @@ npm run start
 - 観測性/デバッグ: `docs/preview/observability.md`
 - パフォーマンス: `docs/preview/performance.md`
 - 配布/デプロイ: `docs/preview/release.md`
+- Core API: `docs/core-api.md`
 - Schema v1: `docs/schema-v1.md`
 - SSR/CSR/Hydration: `docs/ssr-csr-hydration.md`
 - サンプル: `docs/samples/`
