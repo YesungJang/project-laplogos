@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Core: `LaplogosEngine.get_state` を追加（state データの決定的・読み取り専用スナップショット）
+- Docs: Core 公開 API のドキュメント `docs/core-api.md` を追加
+
 ## v0.1.0 (beta) - 2025-12-31
 
 - Core: materialize/diff/patch 基盤、ID 制約、ガードレール（max nodes/loop/depth）
