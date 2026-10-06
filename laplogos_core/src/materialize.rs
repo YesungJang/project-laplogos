@@ -1,7 +1,10 @@
 use serde_json::Value;
 use std::collections::HashSet;
 
-use crate::{store::LaplogosState, LaplogosNode};
+use crate::{
+    store::{canonicalize_value, LaplogosState},
+    LaplogosNode,
+};
 
 const MAX_NODES: usize = 5000;
 const MAX_DEPTH: usize = 256;
@@ -256,6 +259,38 @@ pub fn materialize_one_root(
         0 => Err(LaplogosError::new("root if=false is fatal")),
         _ => Err(LaplogosError::new("root must materialize to a single node")),
     }
+}
+
+/// Returns a detached, read-only snapshot of the materialized structure for
+/// `root` and `state`.
+///
+/// This is the pure inspection path: it materializes through
+/// [`materialize_one_root`] with locally owned warnings that are dropped on
+/// return, so it never logs, renders or touches engine state. The result uses
+/// the existing serialized [`LaplogosNode`] representation with object keys
+/// sorted recursively, so equal input always produces an identical value;
+/// arrays and children keep their materialized order. The value is a deep copy:
+/// mutating it cannot affect the page or the state.
+pub fn inspect_snapshot_value(
+    root: &LaplogosNode,
+    state: &LaplogosState,
+) -> Result<Value, LaplogosError> {
+    let mut warnings = Vec::new();
+    let materialized = materialize_one_root(root, state, &mut warnings)?;
+    let value = serde_json::to_value(&materialized).map_err(|e| {
+        LaplogosError::new(format!("Failed to serialize materialized root: {e}"))
+    })?;
+    Ok(canonicalize_value(&value))
+}
+
+/// Serializes [`inspect_snapshot_value`] to JSON.
+pub fn inspect_snapshot_json(
+    root: &LaplogosNode,
+    state: &LaplogosState,
+) -> Result<String, LaplogosError> {
+    let value = inspect_snapshot_value(root, state)?;
+    serde_json::to_string(&value)
+        .map_err(|e| LaplogosError::new(format!("Failed to serialize snapshot: {e}")))
 }
 
 fn check_depth_limit(root: &LaplogosNode) -> Result<(), LaplogosError> {

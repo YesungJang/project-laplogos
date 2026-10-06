@@ -16,6 +16,7 @@ pub mod normalize;
 
 pub use renderer::render_to_string;
 pub use normalize::normalize_page;
+pub use materialize::{inspect_snapshot_json, inspect_snapshot_value};
 pub use store::LaplogosState;
 use store::{
     apply_action, canonicalize_value, normalize_action, validate_action, LaplogosConfig,
@@ -194,6 +195,20 @@ impl LaplogosEngine {
     pub fn get_state(&self) -> String {
         let inner = self.inner.borrow();
         inner.state.snapshot_json()
+    }
+
+    /// Returns a deterministic, read-only snapshot of the current materialized
+    /// structure.
+    ///
+    /// The snapshot is produced from the current normalized page and state, so
+    /// it works without a prior render and never reads the last rendered tree
+    /// or the DOM. On success and on failure alike it leaves state, page, logs
+    /// and metrics untouched; materialization failures are returned as errors
+    /// instead of being logged.
+    pub fn inspect(&self) -> Result<String, JsValue> {
+        let inner = self.inner.borrow();
+        inspect_snapshot_json(&inner.normalized_page.root, &inner.state)
+            .map_err(|err| JsValue::from_str(&err.message))
     }
 
     pub fn get_action_log_json(&self) -> String {
