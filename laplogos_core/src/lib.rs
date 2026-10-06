@@ -17,7 +17,10 @@ pub mod normalize;
 pub use renderer::render_to_string;
 pub use normalize::normalize_page;
 pub use store::LaplogosState;
-use store::{apply_action, normalize_action, validate_action, LaplogosConfig, ValidatedAction};
+use store::{
+    apply_action, canonicalize_value, normalize_action, validate_action, LaplogosConfig,
+    ValidatedAction,
+};
 use crate::materialize::{materialize_one_root, LaplogosError};
 
 const SCHEMA_VERSION_DEFAULT: u8 = 1;
@@ -186,6 +189,11 @@ impl LaplogosEngine {
     pub fn get_state_json(&self) -> String {
         let inner = self.inner.borrow();
         serde_json::to_string(&inner.state.data).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    pub fn get_state(&self) -> String {
+        let inner = self.inner.borrow();
+        inner.state.snapshot_json()
     }
 
     pub fn get_action_log_json(&self) -> String {
@@ -794,24 +802,6 @@ fn canonicalize_action(action: &store::ActionSpec) -> Value {
     }
     root.insert("d".to_string(), Value::Object(d_map));
     Value::Object(root)
-}
-
-fn canonicalize_value(value: &Value) -> Value {
-    match value {
-        Value::Object(map) => {
-            let mut keys: Vec<&String> = map.keys().collect();
-            keys.sort();
-            let mut out = Map::new();
-            for key in keys {
-                if let Some(val) = map.get(key) {
-                    out.insert(key.clone(), canonicalize_value(val));
-                }
-            }
-            Value::Object(out)
-        }
-        Value::Array(items) => Value::Array(items.iter().map(canonicalize_value).collect()),
-        _ => value.clone(),
-    }
 }
 
 fn default_schema_version() -> u8 {

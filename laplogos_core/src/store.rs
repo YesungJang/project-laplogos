@@ -1,10 +1,52 @@
 use serde::Deserialize;
-use serde_json::{Number, Value};
+use serde_json::{Map, Number, Value};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
 pub struct LaplogosState {
     pub data: HashMap<String, Value>,
+}
+
+impl LaplogosState {
+    /// Returns a detached, read-only snapshot of the runtime state data.
+    ///
+    /// Object keys are sorted recursively, so equal state always produces an
+    /// identical value regardless of insertion order. The returned value is a
+    /// deep copy: mutating it cannot affect this state.
+    pub fn snapshot_value(&self) -> Value {
+        let mut keys: Vec<&String> = self.data.keys().collect();
+        keys.sort();
+        let mut out = Map::new();
+        for key in keys {
+            if let Some(val) = self.data.get(key) {
+                out.insert(key.clone(), canonicalize_value(val));
+            }
+        }
+        Value::Object(out)
+    }
+
+    /// Serializes [`LaplogosState::snapshot_value`] to JSON.
+    pub fn snapshot_json(&self) -> String {
+        serde_json::to_string(&self.snapshot_value()).unwrap_or_else(|_| "{}".to_string())
+    }
+}
+
+pub fn canonicalize_value(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            let mut out = Map::new();
+            for key in keys {
+                if let Some(val) = map.get(key) {
+                    out.insert(key.clone(), canonicalize_value(val));
+                }
+            }
+            Value::Object(out)
+        }
+        Value::Array(items) => Value::Array(items.iter().map(canonicalize_value).collect()),
+        _ => value.clone(),
+    }
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
