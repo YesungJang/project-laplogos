@@ -325,6 +325,44 @@ pub fn find_node_snapshot_json(
         .map_err(|e| LaplogosError::new(format!("Failed to serialize node: {e}")))
 }
 
+/// Returns a detached, read-only snapshot of the whole materialized structure
+/// for `root` and `state`.
+///
+/// This is the pure inspection path: it materializes through
+/// [`materialize_one_root`] with locally owned warnings that are dropped on
+/// return, so it never logs, renders or touches engine state, and it needs no
+/// prior render.
+///
+/// The result uses the existing serialized [`LaplogosNode`] representation with
+/// object keys recursively sorted by [`canonicalize_value`], so equal input
+/// always produces an identical value; arrays and children keep their
+/// materialized order. The value is a deep copy: mutating it cannot affect the
+/// page or the state.
+///
+/// Returns an error when materialization itself fails.
+pub fn inspect_snapshot_value(
+    root: &LaplogosNode,
+    state: &LaplogosState,
+) -> Result<Value, LaplogosError> {
+    let mut warnings = Vec::new();
+    let materialized = materialize_one_root(root, state, &mut warnings)?;
+
+    let value = serde_json::to_value(&materialized).map_err(|e| {
+        LaplogosError::new(format!("Failed to serialize materialized root: {e}"))
+    })?;
+    Ok(canonicalize_value(&value))
+}
+
+/// Serializes [`inspect_snapshot_value`] to JSON.
+pub fn inspect_snapshot_json(
+    root: &LaplogosNode,
+    state: &LaplogosState,
+) -> Result<String, LaplogosError> {
+    let value = inspect_snapshot_value(root, state)?;
+    serde_json::to_string(&value)
+        .map_err(|e| LaplogosError::new(format!("Failed to serialize snapshot: {e}")))
+}
+
 fn check_depth_limit(root: &LaplogosNode) -> Result<(), LaplogosError> {
     let mut stack = vec![(root, 1usize)];
     while let Some((node, depth)) = stack.pop() {
