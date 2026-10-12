@@ -1,6 +1,11 @@
 import { readFile } from "fs/promises";
 import { resolve } from "path";
 
+// Keep in sync with the recovery line in components/ErrorView.tsx so that an
+// SSR-rendered error and its hydrated counterpart stay identical.
+const RECOVERY_INSTRUCTION =
+  "ページを再読み込みし、解決しない場合は Debug View を確認してください。";
+
 let cachedWasm: Uint8Array | null = null;
 let cachedWasmPath: string | null = null;
 
@@ -40,10 +45,10 @@ export function escapeJsonForScript(payload: unknown) {
 export function renderErrorHtml(message: string) {
   const safe = escapeHtml(message);
   return [
-    '<div class="rounded-md border border-rose-200 bg-rose-50 p-4 text-rose-900">',
+    '<div role="alert" class="rounded-md border border-rose-200 bg-rose-50 p-4 text-rose-900">',
     '<h3 class="text-base font-semibold">Laplogos Error</h3>',
     `<p class="mt-2 text-sm">${safe}</p>`,
-    '<p class="mt-2 text-xs text-rose-700">Debug View を確認してください。</p>',
+    `<p class="mt-2 text-xs text-rose-700">${RECOVERY_INSTRUCTION}</p>`,
     "</div>",
   ].join("");
 }
