@@ -1,5 +1,15 @@
 import { readFile } from "fs/promises";
 import { resolve } from "path";
+import {
+  ERROR_VIEW_CONTAINER_CLASS,
+  ERROR_VIEW_DEBUG_TEXT,
+  ERROR_VIEW_HINT_CLASS,
+  ERROR_VIEW_MESSAGE_CLASS,
+  ERROR_VIEW_RECOVERY_TEXT,
+  ERROR_VIEW_TITLE,
+  ERROR_VIEW_TITLE_CLASS,
+  toErrorViewMessage,
+} from "./laplogos-error-view";
 
 let cachedWasm: Uint8Array | null = null;
 let cachedWasmPath: string | null = null;
@@ -37,13 +47,20 @@ export function escapeJsonForScript(payload: unknown) {
   return JSON.stringify(payload).replace(/</g, "\\u003c");
 }
 
+/**
+ * SSR counterpart of `components/ErrorView.tsx`.
+ *
+ * Both paths render the same alert: the message stays escaped plain text and
+ * the recovery instruction is shown next to the Debug View guidance.
+ */
 export function renderErrorHtml(message: string) {
-  const safe = escapeHtml(message);
+  const safe = escapeHtml(toErrorViewMessage(message));
   return [
-    '<div class="rounded-md border border-rose-200 bg-rose-50 p-4 text-rose-900">',
-    '<h3 class="text-base font-semibold">Laplogos Error</h3>',
-    `<p class="mt-2 text-sm">${safe}</p>`,
-    '<p class="mt-2 text-xs text-rose-700">Debug View を確認してください。</p>',
+    `<div role="alert" aria-live="assertive" aria-atomic="true" class="${ERROR_VIEW_CONTAINER_CLASS}">`,
+    `<h3 class="${ERROR_VIEW_TITLE_CLASS}">${ERROR_VIEW_TITLE}</h3>`,
+    `<p class="${ERROR_VIEW_MESSAGE_CLASS}">${safe}</p>`,
+    `<p class="${ERROR_VIEW_HINT_CLASS}">${ERROR_VIEW_RECOVERY_TEXT}</p>`,
+    `<p class="${ERROR_VIEW_HINT_CLASS}">${ERROR_VIEW_DEBUG_TEXT}</p>`,
     "</div>",
   ].join("");
 }

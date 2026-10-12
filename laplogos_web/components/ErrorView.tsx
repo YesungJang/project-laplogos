@@ -1,15 +1,35 @@
 'use client';
 
+import {
+  ERROR_VIEW_CONTAINER_CLASS,
+  ERROR_VIEW_DEBUG_TEXT,
+  ERROR_VIEW_HINT_CLASS,
+  ERROR_VIEW_MESSAGE_CLASS,
+  ERROR_VIEW_RECOVERY_TEXT,
+  ERROR_VIEW_TITLE,
+  ERROR_VIEW_TITLE_CLASS,
+  toErrorViewMessage,
+} from "../lib/laplogos-error-view";
+
 type Props = {
   message: string;
 };
 
 export function ErrorView({ message }: Props) {
+  // The message always renders as plain text; unusable values fall back.
+  const text = toErrorViewMessage(message);
+
   return (
-    <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-rose-900">
-      <h3 className="text-base font-semibold">Laplogos Error</h3>
-      <p className="mt-2 text-sm">{message}</p>
-      <p className="mt-2 text-xs text-rose-700">Debug View を確認してください。</p>
+    <div
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      className={ERROR_VIEW_CONTAINER_CLASS}
+    >
+      <h3 className={ERROR_VIEW_TITLE_CLASS}>{ERROR_VIEW_TITLE}</h3>
+      <p className={ERROR_VIEW_MESSAGE_CLASS}>{text}</p>
+      <p className={ERROR_VIEW_HINT_CLASS}>{ERROR_VIEW_RECOVERY_TEXT}</p>
+      <p className={ERROR_VIEW_HINT_CLASS}>{ERROR_VIEW_DEBUG_TEXT}</p>
     </div>
   );
 }
