@@ -30,3 +30,4 @@ pnpm-debug.log*
 # --- Project laplogos Specific ---
 *.laplogos.json
 temp/
+/laplogos_web/public/wasm/*.wasm
